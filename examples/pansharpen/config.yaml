@@ -1,0 +1,23 @@
+catalog:
+  version: 1.0.0
+  plugins:
+  - use: stac-resolver
+  - use: pansharpen
+  - use: pansharpened
+  - use: executor
+  - use: events
+  - use: zarr
+  - use: stac-json
+request:
+  sources:
+  - stac-resolver
+  goal:
+    plugin: pansharpened
+    settings:
+      publish:
+        encode:
+          plugin: zarr
+        data_out:
+          plugin: filesystem
+        metadata_out:
+          plugin: stac-json
