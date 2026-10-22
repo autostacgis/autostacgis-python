@@ -1,0 +1,6 @@
+[submodule "external/eodag"]
+	path = external/eodag
+	url = https://github.com/autostacgis/eodag.git
+[submodule "external/eoreader"]
+	path = external/eoreader
+	url = https://github.com/autostacgis/eoreader.git
