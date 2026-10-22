@@ -1,0 +1,25 @@
+__pycache__/
+*.py[cod]
+.venv*/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+*.pstats
+.DS_Store
+/.previous-autostacgis/
+/.previous-edlog/
+
+/work/
+
+# Generated files stay inside their example folder.
+/examples/**/data/
+/examples/**/input/
+/examples/**/output/
+/examples/**/state/
+/examples/**/work/
+/examples/**/normalization-output/
+/examples/_local/

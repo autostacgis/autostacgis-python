@@ -1,0 +1,127 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+[project]
+name = "autostacgis"
+version = "1.0.0"
+description = "Native planning and streaming execution for STAC-described geospatial products"
+requires-python = ">=3.12"
+readme = "README.md"
+license = "GPL-3.0-only"
+dependencies = [
+  "PyYAML>=6,<7", "jsonschema[format]>=4.23,<5", "referencing>=0.36,<1",
+  "pystac-core>=1.15,<2", "click>=8,<9", "httpx>=0.28,<1", "wcmatch>=10,<12",
+  "networkx>=3,<4",
+  "jsonata-python>=0.7,<0.8", "numpy>=2,<3", "rasterio>=1.4,<2", "shapely>=2,<3", "pyproj>=3.7,<4",
+  "pyarrow>=19,<27", "zarr>=3,<4", "numexpr>=2,<3", "threadpoolctl>=3,<4"
+]
+[project.optional-dependencies]
+atmosphere = ["Py6S>=1.9,<2"]
+spectralmatch = ["spectralmatch @ git+https://github.com/spectralmatch/spectralmatch.git@6c73cb2fe8a8d975e3233bb907e1a1caa4414b3d"]
+registration = ["coregix>=0.3,<0.4", "opencv-python-headless>=4.10,<5"]
+cloud = ["omnicloudmask>=1,<2"]
+pointcloud = ["laspy[lazrs]>=2,<3"]
+distributed = ["dask[distributed]>=2025"]
+scheduler = ["APScheduler>=3.11,<4"]
+s3 = ["boto3>=1.35,<2"]
+telemetry = ["opentelemetry-sdk>=1,<2"]
+dev = ["pytest>=8,<10", "ruff>=0.12", "build>=1,<2"]
+[project.scripts]
+autostacgis = "autostacgis.cli:main"
+[tool.hatch.metadata]
+allow-direct-references = true
+[tool.hatch.build.targets.wheel]
+packages = ["autostacgis"]
+[tool.hatch.build.targets.sdist]
+include = ["/autostacgis", "/tests", "/examples", "/docs", "/tools", "/README.md", "/LICENSE", "/pyproject.toml", "/spec.lock.json", "/environment.yml", "/.gitmodules"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[project.entry-points."autostacgis.plugins"]
+"align_grid" = "autostacgis.plugins.align_grid"
+"apply_mask" = "autostacgis.plugins.apply_mask"
+"atmosphere" = "autostacgis.plugins.atmosphere"
+"atmosphere-for-image" = "autostacgis.plugins.atmosphere_for_image"
+"atmospheric_correction" = "autostacgis.plugins.atmospheric_correction"
+"band_math" = "autostacgis.plugins.band_math"
+"clean_footprints" = "autostacgis.plugins.clean_footprints"
+"cli" = "autostacgis.plugins.cli"
+"cog" = "autostacgis.plugins.cog"
+"common-crs" = "autostacgis.plugins.common_crs"
+"compatible-grids" = "autostacgis.plugins.compatible_grids"
+"compatible-optical" = "autostacgis.plugins.compatible_optical"
+"dask" = "autostacgis.plugins.dask"
+"dem" = "autostacgis.plugins.dem"
+"detect_clouds" = "autostacgis.plugins.detect_clouds"
+"autostacgis.execution/v1" = "autostacgis.plugins.execution"
+"eodag" = "autostacgis.plugins.eodag"
+"eoreader" = "autostacgis.plugins.eoreader"
+"events" = "autostacgis.plugins.events"
+"executor" = "autostacgis.plugins.executor"
+"explicit-groups" = "autostacgis.plugins.explicit_groups"
+"extract_footprints" = "autostacgis.plugins.extract_footprints"
+"filter" = "autostacgis.plugins.filter"
+"for-each" = "autostacgis.plugins.for_each_goal"
+"gather-all" = "autostacgis.plugins.gather_all"
+"geotiff" = "autostacgis.plugins.geotiff"
+"global_radiometric_match" = "autostacgis.plugins.global_radiometric_match"
+"group-by" = "autostacgis.plugins.group_by"
+"harmonized-mosaic" = "autostacgis.plugins.harmonized_mosaic"
+"has-role" = "autostacgis.plugins.has_role"
+"joint_coregistration" = "autostacgis.plugins.joint_coregistration"
+"local_radiometric_match" = "autostacgis.plugins.local_radiometric_match"
+"markov_seamlines" = "autostacgis.plugins.markov_seamlines"
+"mask_by_polygons" = "autostacgis.plugins.mask_by_polygons"
+"masked" = "autostacgis.plugins.masked"
+"merge_vectors" = "autostacgis.plugins.merge_vectors"
+"metadata-matches" = "autostacgis.plugins.metadata_matches"
+"metadata-schema" = "autostacgis.plugins.metadata_schema"
+"mosaic" = "autostacgis.plugins.mosaic"
+"multiprocessing" = "autostacgis.plugins.multiprocessing"
+"normalized" = "autostacgis.plugins.normalized"
+"normalized-pansharpened" = "autostacgis.plugins.normalized_pansharpened"
+"opentelemetry" = "autostacgis.plugins.opentelemetry"
+"orthorectify_rpc" = "autostacgis.plugins.orthorectify_rpc"
+"output" = "autostacgis.plugins.output_goal"
+"overlap" = "autostacgis.plugins.overlap"
+"pansharpen" = "autostacgis.plugins.pansharpen"
+"pansharpened" = "autostacgis.plugins.pansharpened"
+"parquet" = "autostacgis.plugins.parquet"
+"polygonize" = "autostacgis.plugins.polygonize"
+"python" = "autostacgis.plugins.python"
+"rasterize_point_attribute" = "autostacgis.plugins.rasterize_point_attribute"
+"register_to_reference" = "autostacgis.plugins.register_to_reference"
+"registered" = "autostacgis.plugins.registered"
+"s3" = "autostacgis.plugins.s3"
+"same-fields" = "autostacgis.plugins.same_fields"
+"sample_dem" = "autostacgis.plugins.sample_dem"
+"scheduler" = "autostacgis.plugins.scheduler"
+"sequential" = "autostacgis.plugins.sequential"
+"slurm" = "autostacgis.plugins.slurm"
+"source-member" = "autostacgis.plugins.source_member"
+"stac-api" = "autostacgis.plugins.stac_api"
+"stac-json" = "autostacgis.plugins.stac_json"
+"stac-resolver" = "autostacgis.plugins.stac_resolver"
+"stac-source" = "autostacgis.plugins.stac_source"
+"staging" = "autostacgis.plugins.staging"
+"statistics" = "autostacgis.plugins.statistics"
+"storage" = "autostacgis.plugins.storage"
+"surface-reflectance" = "autostacgis.plugins.surface_reflectance"
+"table" = "autostacgis.plugins.table"
+"threads" = "autostacgis.plugins.threads"
+"voronoi_seamlines" = "autostacgis.plugins.voronoi_seamlines"
+"weighted_seamlines" = "autostacgis.plugins.weighted_seamlines"
+"zarr" = "autostacgis.plugins.zarr"
+
+"buffered-transfer" = "autostacgis.plugins.buffered_transfer"
+"filesystem" = "autostacgis.plugins.filesystem"
+"file-checkpoint" = "autostacgis.plugins.file_checkpoint"
+"valid-data" = "autostacgis.plugins.valid_data"
+"split" = "autostacgis.plugins.split"
+"combine" = "autostacgis.plugins.combine"
+"stac-item" = "autostacgis.plugins.stac_item"

@@ -1,0 +1,16 @@
+name: autostacgis
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - gdal>=3.11,<4
+  - rasterio>=1.4
+  - numpy>=2
+  - pyarrow>=19
+  - sixs
+  - muparser
+  - pip
+  - pip:
+      - -e external/eodag
+      - -e external/eoreader
+      - -e .[dev,atmosphere,spectralmatch,registration,cloud,pointcloud,distributed,scheduler,s3,telemetry]
