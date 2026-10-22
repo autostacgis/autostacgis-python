@@ -1,0 +1,43 @@
+catalog:
+  version: 1.0.0
+  plugins:
+  - use: stac-resolver
+  - use: extract_footprints
+  - use: clean_footprints
+  - use: markov_seamlines
+  - use: mask_by_polygons
+  - use: mosaic
+  - use: output
+  - use: executor
+  - use: events
+  - use: geotiff
+  - use: stac-json
+request:
+  sources:
+  - stac-resolver
+  goal:
+    all_of:
+    - plugin: mosaic
+      settings:
+        name: result
+        area:
+        - -156
+        - 19
+        - -155
+        - 20
+    - plugin: output
+      settings:
+        name: result
+        require:
+          assets.$asset.cf:standard_name: surface_bidirectional_reflectance
+          assets.$asset.unit: '1'
+    - plugin: output
+      settings:
+        name: result
+        publish:
+          encode:
+            plugin: geotiff
+          data_out:
+            plugin: filesystem
+          metadata_out:
+            plugin: stac-json
