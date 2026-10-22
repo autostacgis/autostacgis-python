@@ -1,0 +1,30 @@
+catalog:
+  version: 1.0.0
+  plugins:
+  - use: stac-resolver
+  - use: pansharpen
+  - use: global_radiometric_match
+  - use: normalized-pansharpened
+  - use: group-by
+  - use: executor
+  - use: events
+  - use: geotiff
+  - use: stac-json
+request:
+  sources:
+  - stac-resolver
+  goal:
+    plugin: normalized-pansharpened
+    settings:
+      publish:
+        encode:
+          plugin: geotiff
+        data_out:
+          plugin: filesystem
+        metadata_out:
+          plugin: stac-json
+  sequence:
+    global_radiometric_match.images:
+      plugin: group-by
+      settings:
+        field: properties.platform
