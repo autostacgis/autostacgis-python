@@ -1,0 +1,36 @@
+name: implementation
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e '.[dev,scheduler,distributed,pointcloud]'
+      - run: ruff check autostacgis tests tools examples && ruff format --check autostacgis tests tools examples
+      - run: python tools/check_spec.py
+      - run: pytest
+      - run: python -m build
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: autostacgis
+          create-args: python=3.12 gdal>=3.11 muparser sixs pip
+      - shell: bash -el {0}
+        run: pip install -e '.[dev,atmosphere,scheduler,spectralmatch]' -e external/eodag -e external/eoreader
+      - shell: bash -el {0}
+        run: pytest

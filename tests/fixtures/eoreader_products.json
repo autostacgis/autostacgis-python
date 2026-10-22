@@ -1,0 +1,175 @@
+{
+  "S1": [
+    "metadata/s1a-iw-raw-hh-11111111t111111-11111111t111111-111111-AAAAAA-111-cog.xml"
+  ],
+  "S2": [
+    "GRANULE/tile/MTD_TL.xml"
+  ],
+  "S2_E84": [
+    "S2A_11AAA_11111111_1_L1C.json"
+  ],
+  "S2_THEIA": [
+    "SENTINEL2A_11111111-111111-111_L2A_T11AAA_C_V1-1_MTD_ALL.xml"
+  ],
+  "S3_OLCI": [
+    "Oa11_radiance.nc"
+  ],
+  "S3_SLSTR": [
+    "S1_radiance_an.nc"
+  ],
+  "LANDSAT": [
+    "LO01_L1GT_111111_11111111_11111111_11_RT_MTL.txt"
+  ],
+  "L9": [
+    "LO09_L1GT_111111_11111111_11111111_11_RT_MTL.txt"
+  ],
+  "L8": [
+    "LO08_L1GT_111111_11111111_11111111_11_RT_MTL.txt"
+  ],
+  "L7": [
+    "LE07_L1GT_111111_11111111_11111111_11_RT_MTL.txt"
+  ],
+  "L5": [
+    "LT05_L1TP_111111_11111111_11111111_11_T1_MTL.txt"
+  ],
+  "L4": [
+    "LT04_L1TP_111111_11111111_11111111_11_T1_MTL.txt"
+  ],
+  "L3": [
+    "LM03_L1TP_111111_11111111_11111111_11_T2_MTL.txt"
+  ],
+  "L2": [
+    "LM02_L1TP_111111_11111111_11111111_11_T2_MTL.txt"
+  ],
+  "L1": [
+    "LM01_L1TP_111111_11111111_11111111_11_T2_MTL.txt"
+  ],
+  "PLA": [
+    "files/11111111_111111_11_AAAA_1A_metadata.xml",
+    "manifest.json"
+  ],
+  "RE": [
+    "files/1111111_1111-11-11_RE1_3A_1111111_metadata.xml",
+    "manifest.json"
+  ],
+  "SKY": [
+    "files/11111111_111111_sscA_AAAA_metadata.json",
+    "manifest.json"
+  ],
+  "CSK": [
+    "CSKS1_RAW_U_HI_AA_HH_LA_FN_11111111111111_11111111111111.h5"
+  ],
+  "CSG": [
+    "CSG_SSAR1_RAW_U_1111_S2A_111_HH_LA_D_11111111111111_11111111111111_1_F_11N_Z11_N11.h5"
+  ],
+  "TSX": [
+    "TSX1_SAR__SSC_SE___SM_S_SRA_11111111T111111_11111111T111111.xml"
+  ],
+  "TDX": [
+    "TDX1_SAR__SSC_SE___SM_S_SRA_11111111T111111_11111111T111111.xml"
+  ],
+  "PAZ": [
+    "PAZ1_SAR__SSC_SE___SM_S_SRA_11111111T111111_11111111T111111.xml"
+  ],
+  "RS2": [
+    "metadata/rs2prod.xsd"
+  ],
+  "PLD": [
+    "DIM_PHR1A_P_111111111111111_SEN_aaaaaaaaaa.XML"
+  ],
+  "PNEO": [
+    "DIM_PNEO1_A_111111111111111_PMS-FS_SEN_aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.XML"
+  ],
+  "SPOT67": [
+    "DIM_SPOT6_P_111111111111111_SEN_aaaaaaaaaa.XML"
+  ],
+  "SPOT7": [
+    "DIM_SPOT7_P_111111111111111_SEN_aaaaaaaaaa.XML"
+  ],
+  "SPOT6": [
+    "DIM_SPOT6_P_111111111111111_SEN_aaaaaaaaaa.XML"
+  ],
+  "VIS1": [
+    "DIM_VIS1_PSH_11111111111111_PRJ_S11111_1111_Meta.xml"
+  ],
+  "RCM": [
+    "metadata/product.xml",
+    "metadata/1_RR.tif"
+  ],
+  "QB02": [
+    "11AAA11111111-.TIL"
+  ],
+  "GE01": [
+    "11AAA11111111-.TIL"
+  ],
+  "WV01": [
+    "11AAA11111111-.TIL"
+  ],
+  "WV02": [
+    "11AAA11111111-.TIL"
+  ],
+  "WV03": [
+    "11AAA11111111-.TIL"
+  ],
+  "WV04": [
+    "11AAA11111111-.TIL"
+  ],
+  "WVLG": [
+    "11AAA11111111-.TIL"
+  ],
+  "VANTOR": [
+    "11AAA11111111-.TIL"
+  ],
+  "MAXAR": [
+    "11AAA11111111-.TIL"
+  ],
+  "ICEYE": [
+    "ICEYE_X1_SLC_SM_11111_11111111T111111.xml"
+  ],
+  "SAOCOM": [
+    "S1A_OPER_SAR_EOSSP__CORE_L1A_OLF_11111111T111111.xemt"
+  ],
+  "CAPELLA": [
+    "CAPELLA_C11_SP_GEO_HH_11111111111111_11111111111111.json"
+  ],
+  "UMBRA": [
+    "1111-11-11-11-11-11_UMBRA-11.tif"
+  ],
+  "SV1": [
+    "SV1-01_11111111_L1B1111111111_1111111111111_11-MUX.xml"
+  ],
+  "HLS": [
+    "HLS.L30.T11AAA.1111111T111111.v2.0.Fmask.tif"
+  ],
+  "GS2": [
+    "DE2_PM4_L1A_111111_11111111T111111_11111111T111111_DE2_11111_aaaa.dim"
+  ],
+  "SPOT45": [
+    "METADATA.DIM",
+    "IMAGERY.TIF"
+  ],
+  "SPOT4": [
+    "METADATA.DIM",
+    "IMAGERY.TIF"
+  ],
+  "SPOT5": [
+    "METADATA.DIM",
+    "IMAGERY.TIF"
+  ],
+  "S2_SIN": [
+    "metadata.xml",
+    "B12.jp2"
+  ],
+  "S1_RTC_ASF": [
+    "S1A_IW_11111111T111111_DVP_RTC11_.kmz"
+  ],
+  "ALEPH1": [
+    "11111111_111111_AAA_L0_SR_MS_TOA.vrt"
+  ],
+  "SATELLOGIC": [
+    "11111111_111111_AAA_L0_SR_MS_TOA.vrt"
+  ],
+  "VENUS": [
+    "VENUS-XS_11111111-111111-111_L2A_A_MTD_ALL.xml"
+  ]
+}
