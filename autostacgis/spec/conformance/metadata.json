@@ -1,0 +1,244 @@
+[
+  {
+    "name": "inherit subtree and override",
+    "inputs": {
+      "a": {
+        "properties": {
+          "x": 1,
+          "nested": {
+            "a": 1
+          }
+        }
+      },
+      "b": {
+        "properties": {
+          "nested": {
+            "b": 2
+          }
+        }
+      }
+    },
+    "output": {
+      "inherit_metadata": [
+        "a",
+        "b.properties.nested"
+      ],
+      "set": [
+        {
+          "properties.x": 2
+        },
+        {
+          "properties.invalid": null
+        }
+      ]
+    },
+    "expected": {
+      "properties": {
+        "x": 2,
+        "nested": {
+          "a": 1,
+          "b": 2
+        },
+        "invalid": null
+      }
+    }
+  },
+  {
+    "name": "arrays replace",
+    "inputs": {
+      "a": {
+        "values": [
+          1
+        ]
+      },
+      "b": {
+        "values": [
+          2
+        ]
+      }
+    },
+    "output": {
+      "inherit_metadata": [
+        "a",
+        "b"
+      ]
+    },
+    "expected": {
+      "values": [
+        2
+      ]
+    }
+  },
+  {
+    "name": "set replaces subtree",
+    "inputs": {
+      "a": {
+        "p": {
+          "x": 1,
+          "y": 2
+        }
+      }
+    },
+    "output": {
+      "inherit_metadata": [
+        "a"
+      ],
+      "set": [
+        {
+          "p": {
+            "z": 3
+          }
+        }
+      ]
+    },
+    "expected": {
+      "p": {
+        "z": 3
+      }
+    }
+  },
+  {
+    "name": "missing inheritance is error",
+    "inputs": {
+      "a": {}
+    },
+    "output": {
+      "inherit_metadata": [
+        "a.missing"
+      ]
+    },
+    "error": true
+  },
+  {
+    "name": "start empty with additions",
+    "inputs": {
+      "image": {
+        "properties": {
+          "platform": "sensor"
+        },
+        "assets": {
+          "data": {
+            "unit": "K"
+          }
+        }
+      }
+    },
+    "output": {
+      "inherit_metadata": [],
+      "set": [
+        {
+          "properties.description": "New output"
+        }
+      ]
+    },
+    "expected": {
+      "properties": {
+        "description": "New output"
+      }
+    }
+  },
+  {
+    "name": "copy all then set and remove",
+    "inputs": {
+      "image": {
+        "properties": {
+          "view:off_nadir": 12,
+          "description": "Old"
+        },
+        "assets": {
+          "data": {
+            "unit": "K",
+            "statistics": {
+              "mean": 2
+            }
+          }
+        }
+      }
+    },
+    "output": {
+      "inherit_metadata": [
+        "image"
+      ],
+      "set": [
+        {
+          "properties.description": "Footprints"
+        },
+        {
+          "properties.unknown": null
+        },
+        {
+          "assets.data.statistics": {
+            "mean": 3
+          }
+        }
+      ],
+      "remove": [
+        "assets.data.unit",
+        "assets.data.statistics",
+        "properties.missing"
+      ]
+    },
+    "expected": {
+      "properties": {
+        "view:off_nadir": 12,
+        "description": "Footprints",
+        "unknown": null
+      },
+      "assets": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "name": "remove escaped path",
+    "inputs": {
+      "image": {
+        "properties": {
+          "one.two": 1,
+          "keep": 2
+        }
+      }
+    },
+    "output": {
+      "inherit_metadata": [
+        "image"
+      ],
+      "remove": [
+        "properties.one\\.two"
+      ]
+    },
+    "expected": {
+      "properties": {
+        "keep": 2
+      }
+    }
+  },
+  {
+    "name": "removing parent leaves siblings intact",
+    "inputs": {
+      "image": {
+        "properties": {
+          "old": {
+            "x": 1
+          },
+          "keep": 2
+        }
+      }
+    },
+    "output": {
+      "inherit_metadata": [
+        "image"
+      ],
+      "remove": [
+        "properties.old",
+        "absent.child",
+        "properties.keep.missing"
+      ]
+    },
+    "expected": {
+      "properties": {
+        "keep": 2
+      }
+    }
+  }
+]

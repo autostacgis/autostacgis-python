@@ -1,0 +1,53 @@
+{
+  "eo": {
+    "url": "https://stac-extensions.github.io/eo/v2.0.0/schema.json",
+    "sha256": "1a7494f4d8428ed39d065e3b9703a47392657ca4431c0de1f944a2483771e967"
+  },
+  "raster": {
+    "url": "https://stac-extensions.github.io/raster/v2.0.0/schema.json",
+    "sha256": "f0436f882d0d9b2a4deb432852ccd6efa506f733ca96a4f38efbb2f9ebb58037"
+  },
+  "projection": {
+    "url": "https://stac-extensions.github.io/projection/v2.1.0/schema.json",
+    "sha256": "5e74f032c9e2ac9a3d9734b853bc3625a075d358f0513d93fba0dc9a74c97f43"
+  },
+  "view": {
+    "url": "https://stac-extensions.github.io/view/v1.1.0/schema.json",
+    "sha256": "6ac62fa971b486a031b39f8667b09f226257642cc36d7119e9ff02c0a75293d6"
+  },
+  "processing": {
+    "url": "https://stac-extensions.github.io/processing/v1.2.0/schema.json",
+    "sha256": "a245a18ef537b2f1fddc7cbb833d48e1422378db953787c8f62e34bd5b7952fb"
+  },
+  "product": {
+    "url": "https://stac-extensions.github.io/product/v1.1.0/schema.json",
+    "sha256": "55069a9e43f939fc6e4d678ffbcab719dd2f9ae0cc19a068bc18d1c9f35bc435"
+  },
+  "cf": {
+    "url": "https://stac-extensions.github.io/cf/v1.0.0/schema.json",
+    "sha256": "82e78eb4817065c2bd595337dd4d24128354b89625eb623ed134b763e9c60466"
+  },
+  "sar": {
+    "url": "https://stac-extensions.github.io/sar/v1.3.2/schema.json",
+    "sha256": "5a98f6a2c3439ce2763cd3d3f4155e549d458398297e3f364923a0d9f0f5f33a"
+  },
+  "classification": {
+    "url": "https://stac-extensions.github.io/classification/v2.0.0/schema.json",
+    "sha256": "88644b2d1fdbae3e7e71ef52b35c9d9e11355a7bfba827f67c9b18594ba361a0"
+  },
+  "sat": {
+    "url": "https://stac-extensions.github.io/sat/v1.2.0/schema.json",
+    "sha256": "baf261cf89516f718292b1c38dd2a5510b7a5f62cac063805565ae2d2e7990ea"
+  },
+  "grid": {
+    "url": "https://stac-extensions.github.io/grid/v1.1.0/schema.json",
+    "sha256": "9637929dbdb547c3a8e39fe54643d21290ab0fcd8eca4b0b47b07a75f3a65236"
+  },
+  "data-state": {
+    "url": "https://autostacgis.github.io/stac-data-state/v1.0.0/schema.json",
+    "repository": "https://github.com/autostacgis/stac-data-state",
+    "commit": "b0ac764697b347692cbd975d5a3f3407cefdf1cf",
+    "path": "json-schema/schema.json",
+    "sha256": "d555f7870c10be0fed9621b068f433b9324ffa6665cc4ced535346a3c707c911"
+  }
+}

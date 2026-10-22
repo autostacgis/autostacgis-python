@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/catalog.json",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "1.0.0"
+    },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/plugin.json"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "use": {
+                "type": "string",
+                "minLength": 1
+              },
+              "settings": {
+                "type": "object"
+              },
+              "execution": {
+                "type": "object",
+                "properties": {
+                  "transfer": {
+                    "enum": [
+                      "memory",
+                      "file",
+                      "optimized"
+                    ]
+                  },
+                  "checkpoint": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "plugin": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "settings": {
+                            "type": "object"
+                          }
+                        },
+                        "required": [
+                          "plugin"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "outputs": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "publish": {
+                          "type": "object",
+                          "properties": {
+                            "encode": {
+                              "type": "object",
+                              "properties": {
+                                "plugin": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "settings": {
+                                  "type": "object"
+                                }
+                              },
+                              "required": [
+                                "plugin"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "data_out": {
+                              "type": "object",
+                              "properties": {
+                                "plugin": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "settings": {
+                                  "type": "object"
+                                }
+                              },
+                              "required": [
+                                "plugin"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "metadata_out": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "plugin": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "settings": {
+                                        "type": "object"
+                                      }
+                                    },
+                                    "required": [
+                                      "plugin"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "required": [],
+                          "additionalProperties": false
+                        },
+                        "transfer": {
+                          "enum": [
+                            "memory",
+                            "file",
+                            "optimized"
+                          ]
+                        }
+                      },
+                      "required": [],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "use"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "data_transfer": {
+          "type": "object",
+          "properties": {
+            "plugin": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "plugin"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "runtime": {
+      "type": "object"
+    },
+    "solver": {
+      "type": "object",
+      "properties": {
+        "max_steps": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_states": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_bindings": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "timeout": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "extension_schemas": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "required": [
+    "version",
+    "plugins"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/config.json",
+  "type": "object",
+  "properties": {
+    "catalog": {
+      "$ref": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/catalog.json"
+    },
+    "request": {
+      "$ref": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/request.json"
+    }
+  },
+  "required": [
+    "request"
+  ],
+  "additionalProperties": false
+}

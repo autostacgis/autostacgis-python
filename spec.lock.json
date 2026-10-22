@@ -1,0 +1,27 @@
+{
+  "repository": "https://github.com/autostacgis/autostacgis",
+  "version": "1.0.0",
+  "commit": "16169830035b3b0651261c7511651e13a5b6ec44",
+  "files": {
+    "conformance/metadata.json": "b58e43d3eb6371c87797ce9448c7c07f93ad291fdaf59b11450b95e4266e7692",
+    "extensions/cf/schema.json": "82e78eb4817065c2bd595337dd4d24128354b89625eb623ed134b763e9c60466",
+    "extensions/classification/schema.json": "88644b2d1fdbae3e7e71ef52b35c9d9e11355a7bfba827f67c9b18594ba361a0",
+    "extensions/data-state/schema.json": "d555f7870c10be0fed9621b068f433b9324ffa6665cc4ced535346a3c707c911",
+    "extensions/eo/schema.json": "1a7494f4d8428ed39d065e3b9703a47392657ca4431c0de1f944a2483771e967",
+    "extensions/grid/schema.json": "9637929dbdb547c3a8e39fe54643d21290ab0fcd8eca4b0b47b07a75f3a65236",
+    "extensions/lock.json": "0156ed650e7f3a7980a2537ce13fbad7dcc6ce4f22dc3ec2aabcfde0e95f31e2",
+    "extensions/processing/schema.json": "a245a18ef537b2f1fddc7cbb833d48e1422378db953787c8f62e34bd5b7952fb",
+    "extensions/product/schema.json": "55069a9e43f939fc6e4d678ffbcab719dd2f9ae0cc19a068bc18d1c9f35bc435",
+    "extensions/projection/schema.json": "5e74f032c9e2ac9a3d9734b853bc3625a075d358f0513d93fba0dc9a74c97f43",
+    "extensions/raster/schema.json": "f0436f882d0d9b2a4deb432852ccd6efa506f733ca96a4f38efbb2f9ebb58037",
+    "extensions/sar/schema.json": "5a98f6a2c3439ce2763cd3d3f4155e549d458398297e3f364923a0d9f0f5f33a",
+    "extensions/sat/schema.json": "baf261cf89516f718292b1c38dd2a5510b7a5f62cac063805565ae2d2e7990ea",
+    "extensions/view/schema.json": "6ac62fa971b486a031b39f8667b09f226257642cc36d7119e9ff02c0a75293d6",
+    "schemas/catalog.json": "e08a357c83524df492a247c79fb56a79d3f1f887d91bc691f0cb874077c35da7",
+    "schemas/goal.json": "84f51b5c3f91729a164cd78e5f3916406620dec8695b91662e6e8c561979ff23",
+    "schemas/plugin.json": "0f7c60ef4d923e885ff9d30d3ce2631e94bc1593933f44f2935c55150d770413",
+    "schemas/request.json": "12ee18db9645c4e2b4926ade6ca4b10e29508f797135288f03560331e5bb59ef",
+    "schemas/config.json": "346af5516a5e7e5371cbb7ff0bbea199cb3e4def78d63598f3e9cd724dc83836"
+  },
+  "working_tree": false
+}

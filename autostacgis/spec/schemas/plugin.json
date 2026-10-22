@@ -1,0 +1,2334 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/plugin.json",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requires": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "settings": {
+      "type": "object"
+    },
+    "settings_schema": {
+      "type": "object"
+    },
+    "capabilities": {
+      "type": "object",
+      "properties": {
+        "trigger": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "metadata_in": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "data_in": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "sequence": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "checks": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "process": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "encode": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "data_out": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "data_transfer": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "checkpoint": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "metadata_out": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "goal": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "services": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        },
+        "extensions": {
+          "type": "object",
+          "properties": {
+            "implementation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            },
+            "input_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "output_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "transfer": {
+                  "enum": [
+                    "memory",
+                    "file",
+                    "optimized"
+                  ]
+                },
+                "checkpoint": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "plugin": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "settings": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "plugin"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "publish": {
+                        "type": "object",
+                        "properties": {
+                          "encode": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "data_out": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "metadata_out": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "plugin": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "settings": {
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "plugin"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": false
+                      },
+                      "transfer": {
+                        "enum": [
+                          "memory",
+                          "file",
+                          "optimized"
+                        ]
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "implementation"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "minProperties": 1
+    }
+  },
+  "required": [
+    "id",
+    "capabilities"
+  ],
+  "additionalProperties": false
+}

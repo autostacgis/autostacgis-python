@@ -1,0 +1,648 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://autostacgis.github.io/stac-data-state/v1.0.0/schema.json",
+  "title": "Data State Extension",
+  "description": "Independent observed data properties and processing states; physical quantities and units use CF and STAC common metadata.",
+  "type": "object",
+  "required": [
+    "stac_extensions",
+    "type"
+  ],
+  "properties": {
+    "stac_extensions": {
+      "type": "array",
+      "contains": {
+        "const": "https://autostacgis.github.io/stac-data-state/v1.0.0/schema.json"
+      }
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "Feature",
+        "Collection"
+      ]
+    },
+    "assets": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/fieldsAndBands"
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "type",
+        "properties"
+      ],
+      "properties": {
+        "type": {
+          "const": "Feature"
+        },
+        "properties": {
+          "$ref": "#/definitions/fieldsAndBands"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "const": "Collection"
+        },
+        "summaries": {
+          "$ref": "#/definitions/summaries"
+        },
+        "item_assets": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/fieldsAndBands"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/fieldsAndBands"
+        }
+      ]
+    }
+  ],
+  "definitions": {
+    "fields": {
+      "type": "object",
+      "properties": {
+        "data_state:orthorectified": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "data_state:pansharpened": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "data_state:relative_radiometric_normalization": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "data_state:masked": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "cloud": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "cloud_shadow": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "mosaic_seamline": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "data_state:grid_aligned": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "data_state:local_radiometric_adjustment": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "data_state:cleaned": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "data_state:merged": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "data_state:mosaic": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "data_state:statistics_calculated": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "data_state:modality": {
+          "enum": [
+            "optical",
+            "sar",
+            "lidar",
+            "sonar",
+            "model",
+            null
+          ]
+        },
+        "data_state:spectral_sampling": {
+          "enum": [
+            "panchromatic",
+            "multispectral",
+            "hyperspectral",
+            null
+          ]
+        },
+        "data_state:radiometry": {
+          "enum": [
+            "uncalibrated",
+            "calibrated",
+            "display",
+            null
+          ]
+        },
+        "data_state:atmospheric_correction": {
+          "enum": [
+            "none",
+            "rayleigh",
+            "full",
+            null
+          ]
+        },
+        "data_state:resampled": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Known spatial resampling operations, oldest first. Duplicates are significant. This records known history, not a guarantee of complete upstream provenance."
+        },
+        "data_state:georeferencing": {
+          "enum": [
+            "affine",
+            "rpc",
+            "none",
+            null
+          ],
+          "description": "Pixel-to-ground mapping: affine requires a CRS and usable affine transform; RPC is a sensor grid. A geographic CRS is valid for affine."
+        },
+        "data_state:registration": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "target",
+              "model_type",
+              "model",
+              "tie_points"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "reference",
+                  "joint"
+                ]
+              },
+              "target": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "href": {
+                      "type": "string"
+                    },
+                    "uuid": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "model_type": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "model": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "tie_points": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Ordered successful registrations. Targets identify original source scenes. Models and tie points are actual fitted results; null means not yet computed in a preview."
+        },
+        "data_state:wavelength_bounds": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Lower and upper half-maximum wavelengths, in micrometers. Center wavelength remains eo:center_wavelength."
+        },
+        "data_state:radiance_calibration": {
+          "type": "object",
+          "properties": {
+            "gain": {
+              "type": "number"
+            },
+            "offset": {
+              "type": "number"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "gain",
+            "offset",
+            "source"
+          ],
+          "additionalProperties": false,
+          "description": "Sensor gain and radiance offset used to derive effective raster:scale and raster:offset. Provenance only: do not apply again to calibrated physical values."
+        },
+        "data_state:directory_root": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "description": "Deepest common parent directory of every asset href, including data, metadata and previews. Computed from locations rather than product naming. Relative hrefs yield a relative root; different URI schemes/authorities or incompatible absolute/relative paths yield null. Query strings and fragments do not participate."
+        }
+      },
+      "patternProperties": {
+        "^(?!data_state:)": {}
+      },
+      "additionalProperties": false
+    },
+    "fieldsAndBands": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/fields"
+        },
+        {
+          "properties": {
+            "bands": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/fields"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "summaries": {
+      "type": "object",
+      "properties": {
+        "data_state:orthorectified": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "data_state:pansharpened": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "data_state:relative_radiometric_normalization": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "data_state:masked": {
+          "type": "array",
+          "items": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "cloud": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "cloud_shadow": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "mosaic_seamline": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "data_state:grid_aligned": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "data_state:local_radiometric_adjustment": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "data_state:cleaned": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "data_state:merged": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "data_state:mosaic": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "data_state:statistics_calculated": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "data_state:modality": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "enum": [
+              "optical",
+              "sar",
+              "lidar",
+              "sonar",
+              "model",
+              null
+            ]
+          }
+        },
+        "data_state:spectral_sampling": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "enum": [
+              "panchromatic",
+              "multispectral",
+              "hyperspectral",
+              null
+            ]
+          }
+        },
+        "data_state:radiometry": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "enum": [
+              "uncalibrated",
+              "calibrated",
+              "display",
+              null
+            ]
+          }
+        },
+        "data_state:atmospheric_correction": {
+          "type": [
+            "array",
+            "object"
+          ],
+          "items": {
+            "enum": [
+              "none",
+              "rayleigh",
+              "full",
+              null
+            ]
+          }
+        },
+        "data_state:resampled": {
+          "type": "array",
+          "items": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Known spatial resampling operations, oldest first. Duplicates are significant. This records known history, not a guarantee of complete upstream provenance."
+          }
+        },
+        "data_state:georeferencing": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "affine",
+              "rpc",
+              "none",
+              null
+            ],
+            "description": "Pixel-to-ground mapping: affine requires a CRS and usable affine transform; RPC is a sensor grid. A geographic CRS is valid for affine."
+          }
+        },
+        "data_state:registration": {
+          "type": "array",
+          "items": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "required": [
+                "kind",
+                "target",
+                "model_type",
+                "model",
+                "tie_points"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "reference",
+                    "joint"
+                  ]
+                },
+                "target": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "object",
+                    "minProperties": 1,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "href": {
+                        "type": "string"
+                      },
+                      "uuid": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "model_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "model": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "tie_points": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Ordered successful registrations. Targets identify original source scenes. Models and tie points are actual fitted results; null means not yet computed in a preview."
+          }
+        }
+      },
+      "patternProperties": {
+        "^(?!data_state:)": {}
+      },
+      "additionalProperties": false
+    }
+  }
+}
