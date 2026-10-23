@@ -20,6 +20,7 @@ class RunResult:
     plan: object
     services: object
     directory: Path
+    solver: object = None
 
     def close(self):
         self.services.__exit__(None, None, None)
@@ -573,7 +574,7 @@ class Executor:
             if not solver.validate_outputs(plan, outputs):
                 raise AutoSTACGISError("Published outputs do not satisfy the requested goals")
             events.emit("run_finished", outputs=len(outputs))
-            return RunResult(outputs, plan, services, directory)
+            return RunResult(outputs, plan, services, directory, solver)
         except BaseException as exc:
             # Join workers before releasing buffers, temporary files and services.
             for future in locals().get("running", {}):
