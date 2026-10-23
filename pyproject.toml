@@ -3,12 +3,13 @@ requires = ["hatchling>=1.27,<2"]
 build-backend = "hatchling.build"
 [project]
 name = "autostacgis"
-version = "1.0.0"
+version = "1.1.0"
 description = "Native planning and streaming execution for STAC-described geospatial products"
 requires-python = ">=3.12"
 readme = "README.md"
 license = "GPL-3.0-only"
 dependencies = [
+  "packaging>=24,<27",
   "PyYAML>=6,<7", "jsonschema[format]>=4.23,<5", "referencing>=0.36,<1",
   "pystac-core>=1.15,<2", "click>=8,<9", "httpx>=0.28,<1", "wcmatch>=10,<12",
   "networkx>=3,<4",

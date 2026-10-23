@@ -1,5 +1,6 @@
 """One implementation registry; each plugin declares one explicit capability."""
 
+import re
 from copy import deepcopy
 from importlib import import_module
 from importlib.metadata import entry_points
@@ -27,10 +28,11 @@ INTERFACES = CAPABILITIES
 
 
 class Registry:
-    def __init__(self, builtins=True):
+    def __init__(self, builtins=True, *, plugin_directory=None):
         self.plugins = {}
         self.requirements = {}
         self.defaults = {}
+        self.versions = {}
         if builtins:
             from autostacgis_plugins import install
 
@@ -44,6 +46,10 @@ class Registry:
                 if getattr(entry, "value", None) != implementation.__module__:
                     raise AutoSTACGISError(f"Duplicate plugin name: {entry.name}")
             self.entries[entry.name] = entry
+
+        from .plugin_manager import PluginManager
+
+        PluginManager(plugin_directory).load_into(self)
 
     def load(self, name, active=()):
         if name in active:
@@ -139,12 +145,17 @@ class Registry:
     @staticmethod
     def validate_module(module):
         if hasattr(module, "IMPLEMENTATIONS") or not all(
-            hasattr(module, field) for field in ("ID", "CAPABILITY", "IMPLEMENTATION", "REQUIRES")
+            hasattr(module, field) for field in ("ID", "VERSION", "CAPABILITY", "IMPLEMENTATION", "REQUIRES")
         ):
             raise AutoSTACGISError(
-                "Plugin modules must explicitly declare ID, CAPABILITY, IMPLEMENTATION, and REQUIRES; "
+                "Plugin modules must explicitly declare ID, VERSION, CAPABILITY, IMPLEMENTATION, and REQUIRES; "
                 "plural IMPLEMENTATIONS declarations are not supported"
             )
+
+        if not isinstance(module.VERSION, str) or not re.fullmatch(
+            r"\d+\.\d+\.\d+(?:[-+][\w.-]+)?", module.VERSION
+        ):
+            raise AutoSTACGISError("Plugin VERSION must be a semantic version string")
 
     def register_module(self, module):
         self.validate_module(module)
@@ -155,6 +166,7 @@ class Registry:
             requires=module.REQUIRES,
             defaults=getattr(module, "DEFAULTS", {}),
         )
+        self.versions[module.ID] = module.VERSION
 
     def service_plugins(self):
         return {

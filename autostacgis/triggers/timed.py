@@ -1,7 +1,5 @@
 """APScheduler 3.x triggers with native scheduler, trigger, and job options."""
 
-from copy import deepcopy
-
 from .common import ManagedTrigger, execute, launch
 
 
@@ -14,7 +12,7 @@ class TimedTrigger(ManagedTrigger):
         self.scheduler.add_job(
             runner or execute,
             settings.get("trigger", "interval"),
-            args=[deepcopy(app.catalog), str(app.base_dir), app.request(request or settings.get("request"))],
+            args=[app.snapshot(), str(app.base_dir), app.request(request or settings.get("request"))],
             **settings.get(
                 "trigger_args", {"minutes": 15} if settings.get("trigger", "interval") == "interval" else {}
             ),

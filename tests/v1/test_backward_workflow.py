@@ -26,7 +26,7 @@ def test_namespace_loads_only_selected_entrypoints(monkeypatch):
             "settings_schema": {"type": "object", "properties": {}, "additionalProperties": False},
         }
         return SimpleNamespace(
-            ID="custom", REQUIRES=("backward_chain",), CAPABILITY="goal", IMPLEMENTATION=goal
+            ID="custom", VERSION="1.0.0", REQUIRES=("backward_chain",), CAPABILITY="goal", IMPLEMENTATION=goal
         )
 
     def unused():

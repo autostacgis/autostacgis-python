@@ -35,13 +35,16 @@ EXTENSIONS = {
 
 
 class Stac:
-    def __init__(self, extensions=None):
-        self.schemas = get_local_schema_cache()
+    def __init__(self, extensions=None, metadata_structure=None):
+        from .metadata_structure import MetadataStructure
+
+        self.schemas = deepcopy(get_local_schema_cache())
         for path in (Path(__file__).parent / "spec" / "extensions").glob("*/schema.json"):
             data = read(path)
             self.schemas[data["$id"].rstrip("#")] = data
         for uri, path in (extensions or {}).items():
             self.schemas[uri] = read(path)
+        self.metadata_structure = MetadataStructure(metadata_structure, self)
 
     def retrieve(self, uri):
         if uri not in self.schemas:
@@ -63,7 +66,7 @@ class Stac:
         self.validate_schema(item, f"https://schemas.stacspec.org/v{version}/item-spec/json-schema/item.json")
         for uri in item.get("stac_extensions", []):
             self.validate_schema(item, uri)
-        return item
+        return self.metadata_structure.validate(item)
 
     @staticmethod
     def extensions(item):

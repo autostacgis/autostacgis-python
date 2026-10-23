@@ -20,7 +20,7 @@ class FileTrigger(ManagedTrigger):
         from watchdog.observers.polling import PollingObserver
 
         super().__init__()
-        self.catalog, self.base_dir = deepcopy(app.catalog), str(app.base_dir)
+        self.catalog, self.base_dir = app.snapshot(), str(app.base_dir)
         self.request = app.request(request or settings.get("request"))
         self.request_path = settings.get("request_path", "query.trigger_event")
         self.files_path = settings.get("files_path", "query.files")

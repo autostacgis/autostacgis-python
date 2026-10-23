@@ -71,7 +71,15 @@ class Context:
         from .stac import Stac
 
         catalog = getattr(self, "transfer_catalog", {})
-        return Stac({uri: self.path(path) for uri, path in catalog.get("extension_schemas", {}).items()})
+        catalog = catalog.get("catalog", catalog)
+        return Stac(
+            {uri: self.path(path) for uri, path in catalog.get("extension_schemas", {}).items()},
+            metadata_structure=getattr(self, "structure_definition", None),
+        )
+
+    @property
+    def metadata_structure(self):
+        return self.stac.metadata_structure
 
     @property
     def services(self):
@@ -265,6 +273,7 @@ class Context:
                     "transfer_catalog",
                     "transfer_base",
                     "transfer_work",
+                    "structure_definition",
                 )
                 if hasattr(self, k)
             },
@@ -474,7 +483,12 @@ class Executor:
                     context.transfer_call = self.request.get(
                         "data_transfer", self.app.catalog["defaults"]["data_transfer"]
                     )
-                    context.transfer_catalog = self.app.catalog
+                    context.structure_definition = (
+                        self.app.metadata_structure.definition()
+                        if self.app.metadata_structure.enabled
+                        else None
+                    )
+                    context.transfer_catalog = self.app.snapshot()
                     context.transfer_base = self.app.base_dir
                     context.transfer_work = self.app.work
                     from .dependencies import configured_plugins
@@ -498,7 +512,7 @@ class Executor:
                         cached = checkpoint.load(cache_key, inputs)
                         context.checkpoint_call = checkpoint_call
                         context.checkpoint_key = cache_key
-                        context.checkpoint_catalog = self.app.catalog
+                        context.checkpoint_catalog = self.app.snapshot()
                         context.checkpoint_base = self.app.base_dir
                     if cached is None:
                         future = executor.submit(_execute, function, inputs, step.settings, context)

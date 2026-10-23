@@ -21,6 +21,7 @@ class Application:
 
             catalog = builtin_catalog()
         self.default_request = None
+        structure = catalog.get("metadata_structure")
         if "catalog" in catalog or "request" in catalog:
             config = validate(catalog, "config")
             self.default_request = config["request"]
@@ -152,7 +153,11 @@ class Application:
                     f"Goal {name} requires solver {required}; active solver is {self.solver_name}"
                 )
 
-        self.stac = Stac({uri: self.path(p) for uri, p in catalog.get("extension_schemas", {}).items()})
+        self.stac = Stac(
+            {uri: self.path(p) for uri, p in catalog.get("extension_schemas", {}).items()},
+            metadata_structure=structure,
+        )
+        self.metadata_structure = self.stac.metadata_structure
         self.sources = {}
         self.acquirers = {}
         for capability, collection in (("metadata_in", self.sources), ("data_in", self.acquirers)):
@@ -160,6 +165,15 @@ class Application:
                 implementation = self.registry.resolve(capability, definition["implementation"])
                 collection[name] = implementation()
         self.work = self.path("work")
+
+    def snapshot(self):
+        result = {
+            "catalog": deepcopy(self.catalog),
+            "request": deepcopy(self.default_request or {"goal": {"output": {}}}),
+        }
+        if self.metadata_structure.enabled:
+            result["metadata_structure"] = self.metadata_structure.definition()
+        return result
 
     @classmethod
     def from_file(cls, path, **kwargs):

@@ -105,4 +105,4 @@ class PluginContext:
             raise AutoSTACGISError(f"Unavailable data_in plugin: {name}") from None
 
     def fresh(self):
-        return type(self._app)(self._app.catalog, base_dir=self._app.base_dir, registry=self._app.registry)
+        return type(self._app)(self._app.snapshot(), base_dir=self._app.base_dir, registry=self._app.registry)
