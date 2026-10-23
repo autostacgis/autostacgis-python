@@ -38,7 +38,7 @@ def app_with(*functions):
     registry = Registry()
     config = catalog()
     for function in functions:
-        registry.register(function.__name__, {"process": function})
+        registry.register(function.__name__, "process", function)
         config["plugins"].append(
             {"id": function.__name__, "capabilities": {"process": {"implementation": function.__name__}}}
         )
@@ -156,7 +156,10 @@ def test_same_output_binding_and_for_each_and_extra_inventory():
         ]
     }
     with pytest.raises(NoPlan):
-        app.plan({**req, "solver": {"max_steps": 2}}, [record(ready=False)])
+        app.plan(
+            {**req, "solver": {"plugin": "backward_chain", "settings": {"max_steps": 2}}},
+            [record(ready=False)],
+        )
 
 
 def test_unknown_is_not_false():
@@ -234,12 +237,20 @@ def test_goal_plugin_composition_and_cycle_rejection():
     r.item["properties"]["ready"] = True
     goal = {
         "all_of": [
-            {"plugin": "output", "settings": {"name": "answer", "require": {"properties.ready": True}}},
+            {"output": {"name": "answer", "require": {"properties.ready": True}}},
             {"output": {"name": "answer", "kind": "raster"}},
         ]
     }
     assert app.plan({"goal": goal, "modules": []}, [r]).cost == 0
-    app.registry.register("loop", {"goal": lambda settings, records, context: {"plugin": "loop"}})
+
+    def loop(settings, records, context):
+        return {"plugin": "loop"}
+
+    loop.contract = {
+        "solver": "backward_chain",
+        "settings_schema": {"type": "object", "properties": {}, "additionalProperties": False},
+    }
+    app.registry.register("loop", "goal", loop, requires=("backward_chain",))
     app.capabilities["goal"]["loop"] = {"id": "loop", "implementation": "loop"}
     app.plugins["loop"] = {"id": "loop", "capabilities": {"goal": {"implementation": "loop"}}}
     with pytest.raises(AutoSTACGISError, match="Recursive goal"):
@@ -267,7 +278,7 @@ def test_negative_cost_rejected_and_bound_reported():
         app_with(op).plan(
             {
                 "modules": ["bad"],
-                "solver": {"max_bindings": 1},
+                "solver": {"plugin": "backward_chain", "settings": {"max_bindings": 1}},
                 "goal": {"output": {"require": {"properties.unreachable": True, "properties.done": True}}},
             },
             [record()],
@@ -342,7 +353,7 @@ def test_group_outputs_can_feed_individual_steps():
         {
             "modules": ["together", "finish_each"],
             "goal": {"for_each": {"require": {"properties.done": True}}},
-            "solver": {"max_steps": 3},
+            "solver": {"plugin": "backward_chain", "settings": {"max_steps": 3}},
         },
         [record("a"), record("b")],
     )
@@ -379,14 +390,14 @@ def test_mosaic_cannot_replace_individual_outputs():
             {
                 "modules": ["merge"],
                 "goal": {"for_each": {"require": {"properties.done": True}}},
-                "solver": {"max_steps": 1},
+                "solver": {"plugin": "backward_chain", "settings": {"max_steps": 1}},
             },
             [record("a"), record("b")],
         )
 
 
 def test_mosaic_metadata_requires_all_contributors_to_agree():
-    from autostacgis.plugins.mosaic import predict_mosaic
+    from autostacgis_plugins.mosaic import predict_mosaic
 
     a, b = record("a"), record("b")
     for r in (a, b):
@@ -410,8 +421,9 @@ def test_any_of_can_skip_an_empty_input_selection():
 
 
 def test_mixed_stac_assets_bind_independent_data_kinds():
+    from autostacgis_plugins._backward_chain_planner import inventory
+
     from autostacgis.data.kinds import describe_kinds
-    from autostacgis.planner import inventory
 
     item = record()
     item.item["assets"] = {
@@ -434,7 +446,7 @@ def test_subproblem_limit_is_explicit():
         app_with(op).plan(
             {
                 "modules": ["fix"],
-                "solver": {"max_states": 1},
+                "solver": {"plugin": "backward_chain", "settings": {"max_states": 1}},
                 "goal": {"output": {"require": {"properties.done": True}}},
             },
             [record()],

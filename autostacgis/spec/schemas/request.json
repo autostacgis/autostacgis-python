@@ -95,24 +95,17 @@
     "solver": {
       "type": "object",
       "properties": {
-        "max_steps": {
-          "type": "integer",
-          "minimum": 0
+        "plugin": {
+          "type": "string",
+          "minLength": 1
         },
-        "max_states": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "max_bindings": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "timeout": {
-          "type": "number",
-          "exclusiveMinimum": 0
+        "settings": {
+          "type": "object"
         }
       },
-      "required": [],
+      "required": [
+        "plugin"
+      ],
       "additionalProperties": false
     },
     "runtime": {

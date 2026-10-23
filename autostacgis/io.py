@@ -49,6 +49,7 @@ def asset_path(record, key=None):
 
 def atomic_json(path, data):
     import json
+
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     from uuid import uuid4

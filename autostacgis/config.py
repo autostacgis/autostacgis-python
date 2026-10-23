@@ -73,6 +73,7 @@ def _read(path):
 
 def read(path):
     """Expand local $import directives before interpreting either JSON or YAML."""
+
     def load(filename, active):
         filename = Path(filename).resolve()
         if filename in active:

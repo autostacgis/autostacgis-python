@@ -2,14 +2,14 @@ import json
 from pathlib import Path
 
 import pytest
+from autostacgis_plugins.atmosphere import AtmosphereSource
+from autostacgis_plugins.dem import DemSource
+from autostacgis_plugins.table import TableSource
 from helpers import scene, subset
 
 from autostacgis import Application
 from autostacgis.data.writers import write_raster
 from autostacgis.errors import AutoSTACGISError
-from autostacgis.plugins.atmosphere import AtmosphereSource
-from autostacgis.plugins.dem import DemSource
-from autostacgis.plugins.table import TableSource
 from autostacgis.stac import Stac
 
 
@@ -21,11 +21,21 @@ def test_existing_sidecar_is_reused(tmp_path):
     Stac.extensions(image.item)
     Path(str(path) + ".stac.json").write_text(json.dumps(image.item))
     config = subset("pansharpen")
-    next(p["capabilities"]["metadata_in"] for p in config["plugins"] if p["id"] == "stac-resolver")["settings"] = {
-        "search_glob": "*.tif"
-    }
+    next(p["capabilities"]["metadata_in"] for p in config["plugins"] if p["id"] == "stac-resolver")[
+        "settings"
+    ] = {"search_glob": "*.tif"}
     result = Application(config, base_dir=tmp_path).discover(
-        {"version": "1.0.0", "goal": {"plugin": "pansharpened"}, "sources": ["stac-resolver"]}
+        {
+            "version": "1.0.0",
+            "goal": {
+                "for_each": {
+                    "kind": "raster",
+                    "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                    "require": {"all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]},
+                }
+            },
+            "sources": ["stac-resolver"],
+        }
     )
     assert result[0].item == image.item
 
@@ -35,7 +45,9 @@ def test_glob_metadata_rules_and_conflict(tmp_path):
     path = tmp_path / "ms.tif"
     write_raster(image.payload, path)
     config = subset("pansharpen")
-    next(p["capabilities"]["metadata_in"] for p in config["plugins"] if p["id"] == "stac-resolver")["settings"] = {
+    next(p["capabilities"]["metadata_in"] for p in config["plugins"] if p["id"] == "stac-resolver")[
+        "settings"
+    ] = {
         "search_glob": "*.tif",
         "metadata_rules": [
             {
@@ -49,7 +61,17 @@ def test_glob_metadata_rules_and_conflict(tmp_path):
     }
     app = Application(config, base_dir=tmp_path)
     found = app.discover(
-        {"version": "1.0.0", "goal": {"plugin": "pansharpened"}, "sources": ["stac-resolver"]}
+        {
+            "version": "1.0.0",
+            "goal": {
+                "for_each": {
+                    "kind": "raster",
+                    "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                    "require": {"all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]},
+                }
+            },
+            "sources": ["stac-resolver"],
+        }
     )
     assert found[0].item["assets"]["data"]["data_state:pansharpened"] is False
     image.item["assets"]["data"]["href"] = str(path)
@@ -59,7 +81,15 @@ def test_glob_metadata_rules_and_conflict(tmp_path):
         app.discover(
             {
                 "version": "1.0.0",
-                "goal": {"plugin": "pansharpened"},
+                "goal": {
+                    "for_each": {
+                        "kind": "raster",
+                        "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                        "require": {
+                            "all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]
+                        },
+                    }
+                },
                 "sources": ["stac-resolver"],
             }
         )
@@ -143,7 +173,9 @@ def test_grouped_worldview_enters_inventory_with_both_assets(tmp_path, monkeypat
     combined["assets"]["pan"]["datetime"] = "2024-01-01T00:00:00.2Z"
     Stac.extensions(combined)
     product = SimpleNamespace(
-        stac=SimpleNamespace(create_item=lambda **kwargs: SimpleNamespace(to_dict=lambda: deepcopy(combined))),
+        stac=SimpleNamespace(
+            create_item=lambda **kwargs: SimpleNamespace(to_dict=lambda: deepcopy(combined))
+        ),
         close=lambda: None,
     )
     monkeypatch.setattr(Reader, "open", lambda self, path, **kwargs: product)
@@ -153,18 +185,27 @@ def test_grouped_worldview_enters_inventory_with_both_assets(tmp_path, monkeypat
             "plugins": [
                 {"use": "eoreader", "settings": {"search_glob": "**/*.TIL"}},
                 {"use": "pansharpen"},
-                {"use": "pansharpened"},
             ],
         },
         base_dir=tmp_path,
     )
-    request = {"sources": ["eoreader"], "goal": {"plugin": "pansharpened"}}
+    request = {
+        "sources": ["eoreader"],
+        "goal": {
+            "for_each": {
+                "kind": "raster",
+                "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                "require": {"all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]},
+            }
+        },
+    }
     records = app.discover(request)
     assert len(records) == 1
     assert set(records[0].item["assets"]) == {"mul", "pan"}
     # Acquisition reinspection must not compare the PAN's actual sensing time
     # against the combined Item's representative datetime.
-    from autostacgis.plugins.eoreader import eoreader_metadata
+    from autostacgis_plugins.eoreader import eoreader_metadata
+
     again = eoreader_metadata(records[0].clone(), {}, app.scope("eoreader"))
     assert again.item["assets"]["pan"]["datetime"] == "2024-01-01T00:00:00.2Z"
     component = pan.clone()

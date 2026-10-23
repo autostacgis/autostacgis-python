@@ -145,7 +145,7 @@ def test_auto_before_strict_suffix_establishes_inherited_goals(tmp_path):
 def test_auto_fills_required_prerequisite(monkeypatch, tmp_path):
     from copy import deepcopy
 
-    from autostacgis.plugins.statistics import statistics
+    from autostacgis_plugins.statistics import statistics
 
     contract = deepcopy(statistics.contract)
     contract["argument_requirements"]["image"]["require"] = {"assets.$asset.data_state:grid_aligned": True}
@@ -182,10 +182,12 @@ def test_required_parameters_can_be_supplied_only_by_named_step(tmp_path):
         np.testing.assert_allclose(pixels, 20)
 
 
-def test_mosaic_bbox_goal_compiles_to_json():
-    from autostacgis.config import json_value
-    from autostacgis.plugins.mosaic import goal as mosaic_goal
+def test_mosaic_coverage_is_a_declarative_goal():
+    from pathlib import Path
 
-    compiled = mosaic_goal({"area": [-156, 19, -155, 20]}, [], None)
-    json_value(compiled)
-    assert compiled["output"]["coverage"]["geometry"]["type"] == "Polygon"
+    from autostacgis.config import read
+
+    config = read(Path(__file__).parents[2] / "examples/mosaic/config.yaml")
+    app = Application(config)
+    request = app.request()
+    assert request["goal"]["all_of"][0]["output"]["coverage"]["geometry"]["type"] == "Polygon"

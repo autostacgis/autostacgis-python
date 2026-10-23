@@ -5,6 +5,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from autostacgis_plugins.buffered_transfer import BufferedTransfer
+from autostacgis_plugins.file_checkpoint import FileCheckpoint
 from helpers import scene, subset
 
 from autostacgis import Application, Registry
@@ -12,15 +14,13 @@ from autostacgis.artifacts import Artifact, artifact
 from autostacgis.checkpoint import Checkpoint
 from autostacgis.data import ArrayRaster, FileRaster, Window
 from autostacgis.errors import AutoSTACGISError
-from autostacgis.plugins.buffered_transfer import BufferedTransfer
-from autostacgis.plugins.file_checkpoint import FileCheckpoint
 from autostacgis.publication import publish
 from autostacgis.sequence import route
 
 
 def app_for(tmp_path, function, *, extra=None):
     registry = Registry()
-    registry.register("test-process", {"process": function})
+    registry.register("test-process", "process", function)
     config = subset()
     config["plugins"].append(
         {"id": "test-process", "capabilities": {"process": {"implementation": "test-process"}}}
@@ -62,18 +62,22 @@ def test_metadata_discovery_is_separate_from_selected_acquisition(tmp_path):
     calls = []
 
     class Source:
+        data_in = "test-download"
+
         def discover(self, settings, query, context):
             calls.append(("discover", query))
             yield scene()
 
+    class Download:
         def acquire(self, record, settings, context):
             calls.append(("acquire", record.key))
             return record
 
     registry = Registry()
-    registry.register("test-source", {"metadata_in": Source, "data_in": Source})
+    registry.register("test-source", "metadata_in", Source, requires=("test-download",))
+    registry.register("test-download", "data_in", Download)
     config = subset()
-    config["plugins"].append(registry.definition("test-source"))
+    config["plugins"].extend(registry.definition(name) for name in ("test-source", "test-download"))
     app = Application(config, registry=registry, base_dir=tmp_path)
     req = {"sources": ["test-source"], "query": {"area": [0, 0, 1, 1]}, "goal": {"output": {}}}
     assert len(app.plan(req).initial) == 1
@@ -81,7 +85,8 @@ def test_metadata_discovery_is_separate_from_selected_acquisition(tmp_path):
     with app.run(req):
         pass
     assert [c[0] for c in calls] == ["discover", "discover", "acquire"]
-    assert app.sources["test-source"] is app.acquirers["test-source"]
+    assert app.discover(req)[0].runtime["data_in"] == "test-download"
+    assert set(app.acquirers) >= {"test-download"}
 
 
 def test_bounded_native_and_byte_transfers(tmp_path):
@@ -238,7 +243,9 @@ def test_checkpoint_reuse_content_invalidation_and_corruption(tmp_path, monkeypa
 
 
 def test_processing_generator_resumes_an_intermediate_checkpoint(tmp_path, monkeypatch):
-    monkeypatch.setattr("autostacgis.runtime.storage.implementation_identity", lambda function: ["test-generator"])
+    monkeypatch.setattr(
+        "autostacgis.runtime.storage.implementation_identity", lambda function: ["test-generator"]
+    )
     calls = []
 
     def process(inputs, settings, context):
@@ -281,7 +288,7 @@ def test_checkpoint_locations_and_checks_plugin(tmp_path, monkeypatch):
         checks.append(1)
         return "fail"
 
-    app.registry.register("reject-check", {"checks": reject})
+    app.registry.register("reject-check", "checks", reject)
     config = app.catalog.copy()
     config["plugins"] = [*app.catalog["plugins"], app.registry.definition("reject-check")]
     app = Application(config, registry=app.registry, base_dir=tmp_path)
@@ -344,8 +351,8 @@ def test_configured_transfer_handles_every_step_edge_and_preferences(tmp_path):
 
     process.contract = declaration()
     registry = Registry()
-    registry.register("audit-transfer", {"data_transfer": AuditTransfer})
-    registry.register("test-process", {"process": process})
+    registry.register("audit-transfer", "data_transfer", AuditTransfer)
+    registry.register("test-process", "process", process)
     config = subset()
     config["plugins"].extend([registry.definition("audit-transfer"), registry.definition("test-process")])
     app = Application(config, registry=registry, base_dir=tmp_path)
@@ -402,7 +409,7 @@ def test_remote_destination_does_not_update_original_input_metadata(tmp_path):
     remote.input_types = ["path"]
     remote.output_types = ["path"]
     registry = Registry()
-    registry.register("test-remote", {"data_out": remote})
+    registry.register("test-remote", "data_out", remote)
     config = subset()
     config["plugins"].append(registry.definition("test-remote"))
     app = Application(config, registry=registry, base_dir=tmp_path)
@@ -511,7 +518,7 @@ def test_metadata_destination_uses_actual_remote_reference(tmp_path):
     destination.input_types = ["bytes", "byte-stream", "path"]
     destination.output_types = ["path"]
     registry = Registry()
-    registry.register("metadata-destination", {"data_out": destination})
+    registry.register("metadata-destination", "data_out", destination)
     config = subset()
     config["plugins"].append(registry.definition("metadata-destination"))
     app = Application(config, registry=registry, base_dir=tmp_path)

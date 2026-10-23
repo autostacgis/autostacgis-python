@@ -1,14 +1,14 @@
 import numpy as np
 import pytest
+from autostacgis_plugins.multiprocessing import Processes
+from autostacgis_plugins.sequential import Sequential
+from autostacgis_plugins.threads import Threads as Executor
 from helpers import capabilities, scene, subset
 
 from autostacgis import Application, Registry
 from autostacgis.data import ArrayRaster, FileRaster, Window, ZarrRaster
 from autostacgis.data.writers import write_raster
 from autostacgis.errors import AutoSTACGISError
-from autostacgis.plugins.multiprocessing import Processes
-from autostacgis.plugins.sequential import Sequential
-from autostacgis.plugins.threads import Threads as Executor
 from autostacgis.runtime.registry import Services
 
 
@@ -65,7 +65,16 @@ def test_native_processing_and_stac_validation(tmp_path):
     config = subset("pansharpen")
     app = Application(config, base_dir=tmp_path)
     with app.run(
-        {"version": "1.0.0", "goal": {"plugin": "pansharpened"}},
+        {
+            "version": "1.0.0",
+            "goal": {
+                "for_each": {
+                    "kind": "raster",
+                    "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                    "require": {"all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]},
+                }
+            },
+        },
         [scene(), scene("pan", "panchromatic_imagery", value=20, count=1)],
     ) as result:
         assert len(result.records) == 1
@@ -78,14 +87,24 @@ def test_native_processing_and_stac_validation(tmp_path):
 def test_discovery_never_executes(tmp_path):
     registry = Registry()
     registry.register(
-        "must-not-run", {"process": lambda *args: (_ for _ in ()).throw(AssertionError("executed"))}
+        "must-not-run", "process", lambda *args: (_ for _ in ()).throw(AssertionError("executed"))
     )
     registry.resolve("process", "must-not-run").contract = registry.resolve("process", "pansharpen").contract
     config = subset("pansharpen")
     capabilities(config, "process")[0]["implementation"] = "must-not-run"
     app = Application(config, base_dir=tmp_path, registry=registry)
     plan = app.run(
-        {"version": "1.0.0", "goal": {"plugin": "pansharpened"}, "discovery": True},
+        {
+            "version": "1.0.0",
+            "goal": {
+                "for_each": {
+                    "kind": "raster",
+                    "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                    "require": {"all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]},
+                }
+            },
+            "discovery": True,
+        },
         [scene(), scene("pan", "panchromatic_imagery", count=1)],
     )
     assert len(plan.steps) == 1
@@ -95,14 +114,25 @@ def test_discovery_never_executes(tmp_path):
 def test_false_success_is_rejected(tmp_path):
     registry = Registry()
     registry.register(
-        "bad", {"process": lambda inputs, settings, context: {"result": [inputs["multispectral"][0]]}}
+        "bad", "process", lambda inputs, settings, context: {"result": [inputs["multispectral"][0]]}
     )
     registry.resolve("process", "bad").contract = registry.resolve("process", "pansharpen").contract
     config = subset("pansharpen")
     capabilities(config, "process")[0]["implementation"] = "bad"
     with pytest.raises(AutoSTACGISError, match="violates promised"):
         Application(config, base_dir=tmp_path, registry=registry).run(
-            {"version": "1.0.0", "goal": {"plugin": "pansharpened"}},
+            {
+                "version": "1.0.0",
+                "goal": {
+                    "for_each": {
+                        "kind": "raster",
+                        "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                        "require": {
+                            "all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]
+                        },
+                    }
+                },
+            },
             [scene(), scene("pan", "panchromatic_imagery", count=1)],
         )
 
@@ -113,14 +143,16 @@ def test_zarr_concurrent_chunks_and_stac_delivery(tmp_path):
     request = {
         "version": "1.0.0",
         "goal": {
-            "plugin": "pansharpened",
-            "settings": {
+            "for_each": {
+                "kind": "raster",
+                "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                "require": {"all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]},
                 "publish": {
                     "encode": {"plugin": "zarr"},
                     "data_out": {"plugin": "filesystem"},
                     "metadata_out": {"plugin": "stac-json"},
-                }
-            },
+                },
+            }
         },
     }
     with app.run(request, [scene(), scene("pan", "panchromatic_imagery", value=20, count=1)]) as result:
@@ -149,7 +181,16 @@ def test_multiprocessing_executes_native_pipeline(tmp_path):
     config["runtime"]["executor"] = {"implementation": "multiprocessing", "settings": {"workers": 2}}
     app = Application(config, base_dir=tmp_path)
     with app.run(
-        {"version": "1.0.0", "goal": {"plugin": "pansharpened"}},
+        {
+            "version": "1.0.0",
+            "goal": {
+                "for_each": {
+                    "kind": "raster",
+                    "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                    "require": {"all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]},
+                }
+            },
+        },
         [scene(), scene("pan", "panchromatic_imagery", count=1, value=20)],
     ) as result:
         np.testing.assert_allclose(result.records[0].payload.read(Window(0, 0, 4, 4)).pixels, 10)
@@ -171,7 +212,7 @@ def test_shared_view_keeps_mapping_alive(tmp_path):
 
 def test_dask_executor_uses_existing_cluster(tmp_path):
     distributed = pytest.importorskip("distributed")
-    from autostacgis.plugins.dask import Dask
+    from autostacgis_plugins.dask import Dask
 
     with distributed.LocalCluster(
         n_workers=2, threads_per_worker=1, processes=False, dashboard_address=None
@@ -187,7 +228,16 @@ def test_process_executor_integrates_transfer_and_checkpoint(tmp_path):
         "settings": {"backend": "multiprocessing", "workers": 2},
     }
     app = Application(config, base_dir=tmp_path)
-    request = {"goal": {"plugin": "pansharpened"}, "checkpoint": {"plugin": "file-checkpoint"}}
+    request = {
+        "goal": {
+            "for_each": {
+                "kind": "raster",
+                "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                "require": {"all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]},
+            }
+        },
+        "checkpoint": {"plugin": "file-checkpoint"},
+    }
     for _ in range(2):
         with app.run(request, [scene(), scene("pan", "panchromatic_imagery", value=20, count=1)]) as result:
             np.testing.assert_allclose(result.records[0].payload.read(Window(0, 0, 4, 4)).pixels, 10)
@@ -223,7 +273,7 @@ make_byte_stream.contract = {
 
 def test_worker_byte_stream_is_transferred_before_serialization(tmp_path):
     registry = Registry()
-    registry.register("worker-stream", {"process": make_byte_stream})
+    registry.register("worker-stream", "process", make_byte_stream)
     config = subset()
     config["plugins"].append(registry.definition("worker-stream"))
     config["runtime"]["executor"] = {

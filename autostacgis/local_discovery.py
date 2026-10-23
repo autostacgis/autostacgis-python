@@ -50,7 +50,9 @@ class LocalFiles:
                         key, value = next(iter(assignment.items()))
                         current = get(item, key)
                         if current is not MISSING and current is not None and current != value:
-                            raise AutoSTACGISError(f"Path metadata rule conflicts with existing metadata at {key}")
+                            raise AutoSTACGISError(
+                                f"Path metadata rule conflicts with existing metadata at {key}"
+                            )
                         assign(item, key, value)
             app.stac.extensions(item)
             from .data.kinds import describe_kinds
@@ -60,4 +62,3 @@ class LocalFiles:
             if record.key not in seen:
                 seen.add(record.key)
                 yield record
-

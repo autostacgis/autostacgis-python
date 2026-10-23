@@ -4,13 +4,13 @@ from copy import deepcopy
 from pathlib import Path
 
 from .config import merge, read, validate
-from .dependencies import PluginContext, validate_dependencies
+from .dependencies import PluginContext, requirements, validate_dependencies
 from .errors import AutoSTACGISError, NoPlan, SearchLimit
 from .executor import Executor
 from .model import digest
-from .planner import Planner
 from .registry import CAPABILITIES, Registry
 from .runtime.registry import settings_for, validate_settings
+from .solvers import expand_goal, validate_parameters
 from .stac import Stac
 
 
@@ -59,12 +59,25 @@ class Application:
                 if name in explicit:
                     raise AutoSTACGISError(f"Duplicate selected plugin {name}")
                 explicit[name] = definition
-            self.catalog["plugins"] = [
-                explicit.get(name, self.registry.definition(name)) for name in self.registry.plugins
-            ]
+            resolved = {}
+
+            def select(name, active=()):
+                if name in active:
+                    raise AutoSTACGISError("Recursive plugin dependency: " + " -> ".join((*active, name)))
+                if name in resolved:
+                    return
+                definition = explicit[name] if name in explicit else self.registry.definition(name)
+                for dependency in sorted(requirements({name: definition}, self.registry, name)):
+                    self.registry.load(dependency)
+                    select(dependency, (*active, name))
+                resolved[name] = definition
+
+            for name in explicit:
+                select(name)
+            self.catalog["plugins"] = list(resolved.values())
             self.catalog.setdefault("runtime", {})
             for name in ("executor", "storage", "events"):
-                if name in self.registry.plugins and "services" in self.registry.plugins[name]:
+                if name in resolved and "services" in self.registry.plugins.get(name, {}):
                     self.catalog["runtime"].setdefault(
                         name,
                         deepcopy(
@@ -75,12 +88,22 @@ class Application:
 
         self.catalog["defaults"] = merge(DEFAULTS, self.catalog.get("defaults", {}))
         selected = {p["id"] for p in self.catalog["plugins"]}
-        for call in self.catalog["defaults"].values():
-            name = call["plugin"]
+
+        def include(name):
+            self.registry.load(name)
+            for dependency in self.registry.requirements[name]:
+                include(dependency)
             if name not in selected:
-                self.registry.load(name)
                 self.catalog["plugins"].append(self.registry.definition(name))
                 selected.add(name)
+
+        for call in self.catalog["defaults"].values():
+            include(call["plugin"])
+        solvers = [p["id"] for p in self.catalog["plugins"] if "solver" in p["capabilities"]]
+        if self.catalog.get("solver"):
+            include(self.catalog["solver"]["plugin"])
+        elif not solvers:
+            include("backward_chain")
         self.events = events
         self.active_services = None
         self.active_transfers = None
@@ -95,6 +118,11 @@ class Application:
                 entry = {"id": name, **deepcopy(definition)}
                 self.registry.resolve(capability, entry["implementation"])
                 function = self.registry.resolve(capability, entry["implementation"])
+                if (
+                    capability in ("goal", "solver")
+                    and entry.get("contract", function.contract) != function.contract
+                ):
+                    raise AutoSTACGISError(f"{name}: installed plugin contracts cannot be overridden")
                 if capability not in ("services", "extensions"):
                     entry["settings"] = self.implementation_settings(
                         name,
@@ -104,10 +132,25 @@ class Application:
                             getattr(function, "contract", {}).get("settings", {}),
                             entry.get("settings", {}),
                         ),
-                        partial=capability in ("process", "data_out"),
+                        partial=capability in ("process", "data_out", "goal"),
                     )
                 self.capabilities[capability][name] = entry
         validate_dependencies(self.plugins, self.registry)
+        solvers = self.capabilities["solver"]
+        if len(solvers) != 1:
+            raise AutoSTACGISError("Exactly one solver plugin must be selected; found: " + ", ".join(solvers))
+        self.solver_name = next(iter(solvers))
+        self.solver_implementation = self.registry.resolve(
+            "solver", solvers[self.solver_name]["implementation"]
+        )
+        self.solver_settings({})
+        for name, definition in self.capabilities["goal"].items():
+            implementation = self.registry.resolve("goal", definition["implementation"])
+            required = implementation.contract["solver"]
+            if required != self.solver_name:
+                raise AutoSTACGISError(
+                    f"Goal {name} requires solver {required}; active solver is {self.solver_name}"
+                )
 
         self.stac = Stac({uri: self.path(p) for uri, p in catalog.get("extension_schemas", {}).items()})
         self.sources = {}
@@ -115,13 +158,7 @@ class Application:
         for capability, collection in (("metadata_in", self.sources), ("data_in", self.acquirers)):
             for name, definition in self.capabilities[capability].items():
                 implementation = self.registry.resolve(capability, definition["implementation"])
-                # Stateful search/download providers share one session by implementation.
-                existing = self.sources.get(name)
-                collection[name] = (
-                    existing
-                    if existing is not None and type(existing) is implementation
-                    else implementation()
-                )
+                collection[name] = implementation()
         self.work = self.path("work")
 
     @classmethod
@@ -137,7 +174,35 @@ class Application:
         settings = merge(definition.get("settings", {}), overrides)
         if "settings_schema" in definition:
             validate_settings(definition["settings_schema"], settings, partial=partial)
-        return settings_for(self.registry.resolve(capability, implementation), settings, partial=partial)
+        function = self.registry.resolve(capability, implementation)
+        if capability in ("goal", "solver"):
+            validate_parameters(function.contract["settings_schema"], settings, plugin, partial=partial)
+        return settings_for(function, settings, partial=partial)
+
+    def solver_settings(self, request):
+        settings = deepcopy(self.capabilities["solver"][self.solver_name].get("settings", {}))
+        for call in (self.catalog.get("solver"), request.get("solver")):
+            if call is None:
+                continue
+            if call["plugin"] != self.solver_name:
+                raise AutoSTACGISError(
+                    f"Only solver {self.solver_name} is active; cannot select {call['plugin']}"
+                )
+            settings = merge(settings, call.get("settings", {}))
+        return validate_parameters(
+            self.solver_implementation.contract["settings_schema"], settings, self.solver_name
+        )
+
+    def make_solver(self, request, records):
+        prepared = deepcopy(request)
+        prepared["goal"] = expand_goal(request["goal"], records, self)
+        validate_parameters(
+            self.solver_implementation.contract["goal_schema"], prepared["goal"], self.solver_name + " goal"
+        )
+        solver = self.solver_implementation(self, prepared, self.solver_settings(request))
+        if not all(callable(getattr(solver, method, None)) for method in ("plan", "validate_outputs")):
+            raise AutoSTACGISError(f"{self.solver_name}: solver must implement plan and validate_outputs")
+        return solver, prepared
 
     def extension(self, name):
         try:
@@ -266,6 +331,7 @@ class Application:
         if isinstance(value, dict) and "request" in value:
             value = value["request"]
         request = validate(value, "request")
+        self.solver_settings(request)
         self.work = self.path(request.get("work_directory", "work"))
         for capability, field in [("metadata_in", "sources")]:
             for name in request.get(field, []):
@@ -315,6 +381,10 @@ class Application:
             )
             for record in discovered:
                 record.source = name
+                acquisition = record.runtime.get("data_in", getattr(source, "data_in", None))
+                if acquisition is not None:
+                    self.scope(name).acquirer(acquisition)
+                    record.runtime.setdefault("data_in", acquisition)
                 self.stac.extensions(record.item)
                 if record.key in seen:
                     if digest(record.item) != seen[record.key]:
@@ -326,18 +396,17 @@ class Application:
 
     def plan(self, request=None, inputs=None):
         request = self.request(request)
-        return Planner(self, request).plan(self.discover(request) if inputs is None else inputs)
+        records = self.discover(request) if inputs is None else inputs
+        solver, _ = self.make_solver(request, records)
+        return solver.plan(records)
 
     def available(self, request=None, inputs=None):
         request = self.request(request)
         records = self.discover(request) if inputs is None else inputs
-        result = {}
-        for name in self.capabilities["goal"]:
-            try:
-                result[name] = self.plan({**request, "goal": {"plugin": name}}, records).to_dict()
-            except (NoPlan, SearchLimit) as exc:
-                result[name] = {"status": type(exc).__name__, "reason": str(exc)}
-        return result
+        try:
+            return {"requested": self.plan(request, records).to_dict()}
+        except (NoPlan, SearchLimit) as exc:
+            return {"requested": {"status": type(exc).__name__, "reason": str(exc)}}
 
     def run(self, request=None, inputs=None):
         request = self.request(request)
@@ -346,18 +415,20 @@ class Application:
             return self.plan(request, records)
         inspected = set()
         while True:
-            planner = Planner(self, request)
-            plan = planner.plan(records)
+            solver, prepared = self.make_solver(request, records)
+            plan = solver.plan(records)
             used = {key for step in plan.steps for keys in step.inputs.values() for key in keys}
             used.update(key for keys in plan.outputs.values() for key in keys)
             origins = {r.runtime["origin"] for key, r in plan.initial.items() if key in used}
             required = [r for r in records if r.key in origins and r.key not in inspected]
             if not required:
-                return Executor(self, request).run(plan, planner)
+                return Executor(self, prepared).run(plan, solver)
             for record in required:
                 key = record.key
                 index = next(i for i, r in enumerate(records) if r.key == key)
                 name = record.runtime.get("data_in", record.source)
+                if "data_in" in record.runtime and name not in self.acquirers:
+                    raise AutoSTACGISError(f"Unavailable data_in plugin: {name}")
                 if name in self.acquirers:
                     definition = self.capabilities["data_in"][name]
                     record = self.acquirers[name].acquire(

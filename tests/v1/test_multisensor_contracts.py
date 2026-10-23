@@ -43,13 +43,38 @@ def workflow_inputs():
 
 def test_multisensor_collection_contracts():
     images = workflow_inputs()
+    from autostacgis_plugins._backward_chain_planner import Planner, inventory
+
     from autostacgis.contracts import requirements_hold
     from autostacgis.goals import compile_goal, select_outputs
-    from autostacgis.planner import Planner, inventory
 
     app = Application()
     req = {
-        "goal": {"plugin": "harmonized-mosaic"},
+        "goal": {
+            "output": {
+                "kind": "raster",
+                "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                "require": {
+                    "all": [
+                        {
+                            "assets.$asset.cf:standard_name": "surface_bidirectional_reflectance",
+                            "assets.$asset.unit": "1",
+                            "assets.$asset.data_state:orthorectified": True,
+                            "assets.$asset.data_state:pansharpened": True,
+                            "assets.$asset.data_state:relative_radiometric_normalization": True,
+                            "assets.$asset.data_state:local_radiometric_adjustment": True,
+                            "assets.$asset.data_state:masked.cloud": True,
+                            "assets.$asset.data_state:masked.cloud_shadow": True,
+                            "assets.$asset.data_state:masked.mosaic_seamline": True,
+                            "assets.$asset.data_state:mosaic": True,
+                        },
+                        {"path": "assets.$asset.data_state:registration", "entry": {"kind": "reference"}},
+                        {"path": "assets.$asset.data_state:registration", "entry": {"kind": "joint"}},
+                        {},
+                    ]
+                },
+            }
+        },
         "module_settings": {"orthorectify_rpc": {"crs": "EPSG:32604"}},
     }
     p = Planner(app, req)
@@ -105,7 +130,6 @@ def test_full_workflow_is_synthesized_from_selected_plugins(tables_first):
             "plugins": [
                 {"use": name}
                 for name in [
-                    "harmonized-mosaic",
                     "sample_dem",
                     "atmospheric_correction",
                     "orthorectify_rpc",
@@ -130,16 +154,43 @@ def test_full_workflow_is_synthesized_from_selected_plugins(tables_first):
         images.sort(key=lambda record: record.kind != "table")
     plan = app.plan(
         {
-            "goal": {"plugin": "harmonized-mosaic"},
+            "goal": {
+                "output": {
+                    "kind": "raster",
+                    "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                    "require": {
+                        "all": [
+                            {
+                                "assets.$asset.cf:standard_name": "surface_bidirectional_reflectance",
+                                "assets.$asset.unit": "1",
+                                "assets.$asset.data_state:orthorectified": True,
+                                "assets.$asset.data_state:pansharpened": True,
+                                "assets.$asset.data_state:relative_radiometric_normalization": True,
+                                "assets.$asset.data_state:local_radiometric_adjustment": True,
+                                "assets.$asset.data_state:masked.cloud": True,
+                                "assets.$asset.data_state:masked.cloud_shadow": True,
+                                "assets.$asset.data_state:masked.mosaic_seamline": True,
+                                "assets.$asset.data_state:mosaic": True,
+                            },
+                            {"path": "assets.$asset.data_state:registration", "entry": {"kind": "reference"}},
+                            {"path": "assets.$asset.data_state:registration", "entry": {"kind": "joint"}},
+                            {},
+                        ]
+                    },
+                }
+            },
             "module_settings": {"orthorectify_rpc": {"crs": "EPSG:32604"}},
-            "solver": {"timeout": 30, "max_states": 20000, "max_bindings": 2000},
+            "solver": {
+                "plugin": "backward_chain",
+                "settings": {"timeout": 30, "max_states": 20000, "max_bindings": 2000},
+            },
         },
         images,
     )
     modules = [s.module for s in plan.steps]
     assert len(modules) == 25 and modules.count("sample_dem") == 2
     assert "markov_seamlines" in modules and "weighted_seamlines" not in modules
-    assert plan.report["engine"] == "backward-dataflow"
+    assert plan.report["engine"] == "backward_chain"
     for step in plan.steps:
         if step.module in (
             "register_to_reference",

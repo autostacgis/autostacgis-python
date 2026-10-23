@@ -30,7 +30,9 @@ class ServiceContext:
         allowed = requirements(self._services.plugins, self._services.registry, self.owner)
         allowed.update(self._services.registry.requirements.get(self.implementation, ()))
         if self.owner is not None and name != self.owner and name not in allowed:
-            raise AutoSTACGISError(f"Plugin {self.owner} uses undeclared dependency {name}; add it to requires")
+            raise AutoSTACGISError(
+                f"Plugin {self.owner} uses undeclared dependency {name}; add it to requires"
+            )
         return self._services.get(name, settings=settings)
 
 

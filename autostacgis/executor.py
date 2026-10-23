@@ -382,11 +382,10 @@ class Executor:
     def __init__(self, app, request):
         self.app, self.request = app, request
 
-    def run(self, plan, planner):
+    def run(self, plan, solver):
         from concurrent.futures import FIRST_COMPLETED, wait
 
         from .contracts import cost_of, requirements_hold
-        from .goals import compile_goal, select_outputs
 
         directory = self.app.work / "runs" / uuid4().hex
         directory.mkdir(parents=True)
@@ -431,15 +430,15 @@ class Executor:
                 for key, step in list(pending.items()):
                     if not set(step.dependencies) <= done or len(running) >= executor.workers:
                         continue
-                    contract = deepcopy(planner.modules[step.module])
+                    contract = deepcopy(plan.module_contracts[step.module])
                     contract["settings"] = step.settings
                     contract.update(step.options)
                     for policy in contract["argument_requirements"].values():
                         policy.setdefault("transfer", contract.get("transfer", "optimized"))
-                    if step.key in planner.parameter_templates:
+                    if step.key in plan.parameter_templates:
                         from .workflow import parameters
 
-                        template, named = planner.parameter_templates[step.key]
+                        template, named = plan.parameter_templates[step.key]
                         live = parameters(template, named, records, self.app)
                         if live != step.settings:
                             raise AutoSTACGISError(
@@ -556,14 +555,13 @@ class Executor:
                             )
                     done.add(step.key)
                     events.emit("step_finished", action=step.module, key=step.key)
-            goals = compile_goal(self.request["goal"], list(plan.initial.values()), self.app)
             chosen = [records[k] for keys in plan.outputs.values() for k in keys]
-            if select_outputs(chosen, goals) is None:
+            if not solver.validate_outputs(plan, chosen):
                 raise AutoSTACGISError("Actual outputs do not satisfy the requested goals")
             outputs = [attach_payload(r) for r in {r.key: r for r in chosen}.values()]
             from .publication import publish
 
-            policies = planner.output_policies
+            policies = plan.output_policies
             published = {}
             for name, keys in plan.outputs.items():
                 for key in keys:
@@ -572,7 +570,7 @@ class Executor:
                         record = publish(self.app, attach_payload(record), policies[name])
                     published[key] = record
             outputs = list(published.values())
-            if select_outputs(outputs, goals) is None:
+            if not solver.validate_outputs(plan, outputs):
                 raise AutoSTACGISError("Published outputs do not satisfy the requested goals")
             events.emit("run_finished", outputs=len(outputs))
             return RunResult(outputs, plan, services, directory)

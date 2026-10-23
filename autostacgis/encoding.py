@@ -27,7 +27,7 @@ def encode(record, settings, context, format):
             tile_size=settings.get("tile_size", 512),
         )
         media = "image/tiff; application=geotiff" + ("; profile=cloud-optimized" if format == "cog" else "")
-    return Artifact("path", path, media, {"plugin": format} if format != "parquet" else None)
+    return Artifact("path", path, media, {"plugin": format + "-metadata"} if format != "parquet" else None)
 
 
 def embed(record, settings, context, format):

@@ -10,7 +10,9 @@ from ..errors import AutoSTACGISError
 from .batches import crs_document
 
 
-def write_raster(raster, path, *, tile_size=512, driver="GTiff", stac=None, asset_key="data", embed_stac=True, **options):
+def write_raster(
+    raster, path, *, tile_size=512, driver="GTiff", stac=None, asset_key="data", embed_stac=True, **options
+):
     import rasterio
     from affine import Affine
     from rasterio.windows import Window

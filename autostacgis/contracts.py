@@ -61,7 +61,20 @@ def test(record, requirement):
         answer = test(record, requirement["not"])
         return None if answer is None else not answer
     if "jsonata" in requirement:
-        answer = evaluate(requirement["jsonata"], {"item": record.item, "kind": record.kind})
+        answer = evaluate(
+            requirement["jsonata"],
+            {
+                "item": record.item,
+                "kind": record.kind,
+                "asset": record.item.get("assets", {}).get(record.runtime.get("selected_asset", "data"), {}),
+                "asset_key": record.runtime.get("selected_asset", "data"),
+                "parameters": requirement.get("parameters", {}),
+            },
+        )
+        if answer is None:
+            return None
+        if "equals" in requirement:
+            return json_equal(answer, requirement["equals"])
         return answer if type(answer) is bool else None
     if "path" not in requirement:
         return test(record, {"all": [{"path": p, "equals": v} for p, v in requirement.items()]})
@@ -94,10 +107,34 @@ def paths(requirement):
     if "path" in requirement:
         return {canonical(requirement["path"])}
     if "jsonata" in requirement:
-        return {"*"}
+        observed = requirement.get("observes")
+        if observed is None:
+            return {"*"}
+        if (
+            not isinstance(observed, list)
+            or not observed
+            or any(not isinstance(path, str) or not path for path in observed)
+        ):
+            raise AutoSTACGISError("JSONata observes must list nonempty metadata paths")
+        return {canonical(path) for path in observed}
     if set(requirement) & {"all", "any", "not"}:
         return set().union(*(paths(v) for v in requirement.values()))
     return {canonical(k) for k in requirement}
+
+
+def json_equal(actual, expected):
+    """Compare JSON values without conflating booleans and numbers."""
+    if type(actual) in (int, float) and type(expected) in (int, float):
+        return actual == expected
+    if isinstance(actual, list) and isinstance(expected, list):
+        return len(actual) == len(expected) and all(
+            json_equal(a, b) for a, b in zip(actual, expected, strict=True)
+        )
+    if isinstance(actual, dict) and isinstance(expected, dict):
+        return actual.keys() == expected.keys() and all(
+            json_equal(actual[key], expected[key]) for key in actual
+        )
+    return type(actual) is type(expected) and actual == expected
 
 
 def canonical(path):

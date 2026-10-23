@@ -4,7 +4,16 @@ from helpers import scene
 
 from autostacgis.metadata import output_metadata
 
-REQUEST = {"version": "1.0.0", "goal": {"plugin": "pansharpened"}}
+REQUEST = {
+    "version": "1.0.0",
+    "goal": {
+        "for_each": {
+            "kind": "raster",
+            "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+            "require": {"all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]},
+        }
+    },
+}
 
 
 def test_selected_asset_copy_remove_and_empty_start():

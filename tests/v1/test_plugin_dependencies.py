@@ -2,12 +2,12 @@ from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 
 import pytest
+from autostacgis_plugins import modules
 from helpers import scene, subset
 
 from autostacgis import Application, Registry
 from autostacgis.errors import AutoSTACGISError
 from autostacgis.executor import Context, _execute
-from autostacgis.plugins import modules
 from autostacgis.runtime.registry import Services
 
 
@@ -19,9 +19,7 @@ def test_builtin_sources_own_their_implementations_and_declarations():
     providers = modules()
     assert len({module.ID for module in providers}) == len(providers)
     for module in providers:
-        assert all(
-            implementation.__module__ == module.__name__ for implementation in module.IMPLEMENTATIONS.values()
-        )
+        assert module.IMPLEMENTATION.__module__ == module.__name__
 
 
 def test_provider_dependencies_cannot_be_removed_by_catalog():
@@ -113,9 +111,9 @@ def test_service_dependencies_are_checked_and_instances_closed_once(tmp_path):
     def consumer(settings, services):
         return services.get("resource")
 
-    registry.register("resource", {"services": Resource})
-    registry.register("consumer", {"services": consumer}, requires=["resource"])
-    registry.register("undeclared", {"services": consumer})
+    registry.register("resource", "services", Resource)
+    registry.register("consumer", "services", consumer, requires=["resource"])
+    registry.register("undeclared", "services", consumer)
     with Services(registry, {}, directory=tmp_path) as services:
         with pytest.raises(AutoSTACGISError, match="undeclared dependency resource"):
             services.get("undeclared")
@@ -129,8 +127,8 @@ def test_service_dependencies_are_checked_and_instances_closed_once(tmp_path):
 
 def test_service_cycles_fail_before_construction(tmp_path):
     registry = Registry(builtins=False)
-    registry.register("a", {"services": lambda *_: pytest.fail("constructed")}, requires=["b"])
-    registry.register("b", {"services": lambda *_: pytest.fail("constructed")}, requires=["a"])
+    registry.register("a", "services", lambda *_: pytest.fail("constructed"), requires=["b"])
+    registry.register("b", "services", lambda *_: pytest.fail("constructed"), requires=["a"])
     with pytest.raises(AutoSTACGISError, match="Recursive plugin dependency"):
         Services(registry, {}, directory=tmp_path)
 
@@ -139,7 +137,7 @@ def test_module_entry_point_carries_dependencies(monkeypatch):
     import autostacgis.registry as module
 
     provider = SimpleNamespace(
-        ID="example", REQUIRES=("storage",), IMPLEMENTATIONS={"process": lambda *_: None}
+        ID="example", REQUIRES=("storage",), CAPABILITY="process", IMPLEMENTATION=lambda *_: None
     )
     monkeypatch.setattr(
         module, "entry_points", lambda **_: [SimpleNamespace(name="example", load=lambda: provider)]
@@ -168,7 +166,7 @@ def test_declared_action_delegation(tmp_path):
         assert context.owner == "apply_mask"
         return {"result": inputs["image"]}
 
-    registry.register("test-mask", {"process": apply})
+    registry.register("test-mask", "process", apply)
     entry(config, "apply_mask")["capabilities"]["process"]["implementation"] = "test-mask"
     app = Application(config, registry=registry)
     with Services(registry, config["runtime"], directory=tmp_path, plugins=app.plugins) as services:
@@ -179,4 +177,20 @@ def test_declared_action_delegation(tmp_path):
 
 def test_no_sources_runs_without_implicit_discovery(tmp_path):
     app = Application(subset("pansharpen"), base_dir=tmp_path)
-    assert app.discover({"version": "1.0.0", "goal": {"plugin": "pansharpened"}}) == []
+    assert (
+        app.discover(
+            {
+                "version": "1.0.0",
+                "goal": {
+                    "for_each": {
+                        "kind": "raster",
+                        "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                        "require": {
+                            "all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]
+                        },
+                    }
+                },
+            }
+        )
+        == []
+    )

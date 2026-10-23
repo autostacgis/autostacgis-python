@@ -7,7 +7,7 @@ The [AutoSTACGIS specification](https://github.com/autostacgis/autostacgis) defi
 ```mermaid
 flowchart LR
     Sources[EOReader / EODAG / local STAC] --> Inventory[Candidate STAC items and assets]
-    Goals[Composable goal plugins] --> Constraints[Named output constraints]
+    Goals[Declarative metadata goals] --> Constraints[Named output constraints]
     Modules[Python modules: inputs / effects / costs] --> Search[Backward dataflow synthesis]
     Inventory --> Search
     Constraints --> Search
@@ -22,11 +22,11 @@ flowchart LR
 Install with Python 3.12 or newer:
 
 ```sh
-pip install -e '.[dev]'
+pip install -e '.[dev]' -e '../autostacgis-plugins[dev]'
 pip install -e external/eodag -e external/eoreader
 ```
 
-Use the conda environment in `environment.yml` for GDAL-backed operations. Optional extras include `atmosphere`, `spectralmatch`, `registration`, `cloud`, `pointcloud`, and `distributed`. Py6S also requires the 6S executable; cloud inference requires the model assets supplied by OmniCloudMask.
+Use the conda environment in `environment.yml` for GDAL-backed operations. Optional extras in `autostacgis-plugins` include `atmosphere`, `spectralmatch`, `registration`, `cloud`, `pointcloud`, and `distributed`. Py6S also requires the 6S executable; cloud inference requires the model assets supplied by OmniCloudMask.
 
 The standard way to run a workflow is a single self-contained `config.yaml` (or
 `config.json`) containing `catalog` and `request` sections. Keep the settings you
@@ -53,7 +53,7 @@ autostacgis run examples/pansharpen/config.yaml
 
 Each processing function carries an inspectable contract. Inputs and generated outputs are the same `Record` type; each identifies a selected STAC asset and carries a separate native payload handle. Named outputs can feed further modules or branch to several consumers. Collections bind actual members and wait for every selected member to satisfy their input requirements.
 
-Goal plugins compile into `output`, `for_each`, `all_of`, and `any_of`. Reusing an output name combines constraints on that same result. `for_each` selects the initial inventory and requires a corresponding output for every selected member. Spatial coverage is checked against geometry, with unknown footprints remaining unknown.
+The `backward_chain` solver accepts declarative `output`, `for_each`, `all_of`, and `any_of` goals. Reusing an output name combines constraints on that same result. `for_each` selects the initial inventory and requires a corresponding output for every selected member. Spatial coverage is checked against geometry, with unknown footprints remaining unknown. The `metadata-value` adapter supports JSONata values and spatial predicates over bbox, polygon, or custom geometry metadata.
 
 The solver builds dataflow graphs backward from required output states, memoizes subproblems, and prunes unreachable requirements. Installed plugins are selected explicitly in YAML through the `autostacgis.plugins` entry-point namespace. Competing producers of a required state raise `AmbiguousProducer`: select one algorithm, such as Markov, weighted, or Voronoi seamlines.
 
@@ -66,7 +66,7 @@ Runtime settings control shared workers, native thread budgets, tile sizes, and 
 - [Plugin authoring](docs/plugins.md)
 - [STAC and discovery](docs/stac.md)
 - [Dependencies and runtime services](docs/dependencies.md)
-- [Custom processing plugin example](examples/custom-plugin/scale_plugin.py)
+- [Custom processing plugin example](https://github.com/autostacgis/autostacgis-plugins/blob/main/examples/scale_plugin.py)
 - [Combined mosaic goals](examples/mosaic/config.yaml)
 - [Explicit mosaic steps](examples/mosaic-explicit/config.yaml)
 
@@ -79,7 +79,6 @@ version: 1.0.0
 plugins:
   - use: stac-resolver
     settings: {search_glob: "data/**/*.tif"}
-  - use: pansharpened
   - use: pansharpen
   - use: executor
   - use: storage
@@ -102,3 +101,16 @@ locations use `outputs: {result: 'path:./saved.tif'}` and become asset hrefs.
 See [practical workflows](examples/README.md), the comprehensive
 [configuration references](https://github.com/autostacgis/autostacgis/tree/main/examples), and the
 [configuration specification](https://github.com/autostacgis/autostacgis/blob/main/specification.md#run-configuration).
+
+
+Standard plugins are distributed separately in
+[autostacgis-plugins](https://github.com/autostacgis/autostacgis-plugins).
+From sibling checkouts, install both with
+`python -m pip install -e '.[dev]' -e '../autostacgis-plugins[dev]'`.
+Integration extras now belong to `autostacgis-plugins`; for example install
+`../autostacgis-plugins[spectralmatch,registration]` for those processing libraries.
+Each plugin declares one `CAPABILITY` and one `IMPLEMENTATION`. See the
+[before-and-after inventory](https://github.com/autostacgis/autostacgis-plugins/blob/main/docs/plugin-migration.md)
+for split registration names and import changes.
+
+Goal presets now live in configuration. Select one solver with `solver: {plugin: backward_chain, settings: {timeout: 120}}`. Generic goal adapters must declare that solver as a named dependency and expose parameter schemas; see [solver contracts](https://github.com/autostacgis/autostacgis-plugins/blob/main/docs/solvers.md).

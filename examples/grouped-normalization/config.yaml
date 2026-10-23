@@ -4,7 +4,6 @@ catalog:
   - use: stac-resolver
   - use: pansharpen
   - use: global_radiometric_match
-  - use: normalized-pansharpened
   - use: group-by
   - use: executor
   - use: events
@@ -14,8 +13,13 @@ request:
   sources:
   - stac-resolver
   goal:
-    plugin: normalized-pansharpened
-    settings:
+    for_each:
+      kind: raster
+      select:
+        assets.$asset.data_state:spectral_sampling: multispectral
+      require:
+        assets.$asset.data_state:relative_radiometric_normalization: true
+        assets.$asset.data_state:pansharpened: true
       publish:
         encode:
           plugin: geotiff

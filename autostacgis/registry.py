@@ -1,6 +1,6 @@
-"""One implementation registry; each plugin exposes explicit capabilities."""
+"""One implementation registry; each plugin declares one explicit capability."""
 
-from collections.abc import Mapping
+from copy import deepcopy
 from importlib import import_module
 from importlib.metadata import entry_points
 
@@ -19,6 +19,7 @@ CAPABILITIES = (
     "data_out",
     "metadata_out",
     "goal",
+    "solver",
     "services",
     "extensions",
 )
@@ -31,13 +32,17 @@ class Registry:
         self.requirements = {}
         self.defaults = {}
         if builtins:
-            from .plugins import install
+            from autostacgis_plugins import install
 
             install(self)
         self.entries = {}
         for entry in entry_points(group="autostacgis.plugins"):
             if entry.name in self.entries:
                 raise AutoSTACGISError(f"Duplicate registration in autostacgis.plugins: {entry.name}")
+            if entry.name in self.plugins:
+                implementation = next(iter(self.plugins[entry.name].values()))
+                if getattr(entry, "value", None) != implementation.__module__:
+                    raise AutoSTACGISError(f"Duplicate plugin name: {entry.name}")
             self.entries[entry.name] = entry
 
     def load(self, name, active=()):
@@ -46,26 +51,30 @@ class Registry:
         if name not in self.plugins:
             if name in self.entries:
                 provider = self.entries[name].load()
-            elif name.startswith("autostacgis.plugins."):
+            elif name.startswith("autostacgis_plugins."):
                 provider = import_module(name)
             else:
-                from .plugins import builtin_names
+                from autostacgis_plugins import builtin_names
 
                 try:
                     provider = import_module(builtin_names()[name])
                 except KeyError:
-                    raise AutoSTACGISError(f"Plugin {name!r} is not registered in autostacgis.plugins") from None
-            if hasattr(provider, "IMPLEMENTATIONS"):
+                    raise AutoSTACGISError(
+                        f"Plugin {name!r} is not registered in autostacgis.plugins"
+                    ) from None
+            self.validate_module(provider)
+            if name in self.entries and provider.ID != name:
+                raise AutoSTACGISError(f"Registration {name} must use its unique plugin ID {provider.ID}")
+            if hasattr(provider, "ID"):
                 registered = provider.ID
                 if registered not in self.plugins:
                     self.register_module(provider)
-                elif self.plugins[registered] != provider.IMPLEMENTATIONS or self.requirements[
-                    registered
-                ] != tuple(provider.REQUIRES):
+                elif self.plugins[registered] != {
+                    provider.CAPABILITY: provider.IMPLEMENTATION
+                } or self.requirements[registered] != tuple(provider.REQUIRES):
                     raise AutoSTACGISError(f"Conflicting implementation plugin: {registered}")
             else:
-                self.register(name, provider)
-                registered = name
+                raise AutoSTACGISError(f"Invalid plugin module: {name}")
         else:
             registered = name
         for dependency in self.requirements[registered]:
@@ -80,6 +89,11 @@ class Registry:
                 capability: {
                     "implementation": name,
                     "settings": self.defaults[name].get(capability, {}),
+                    **(
+                        {"contract": deepcopy(implementation.contract)}
+                        if capability in ("goal", "solver")
+                        else {}
+                    ),
                     **{
                         field: getattr(implementation, field)
                         for field in ("input_types", "output_types")
@@ -90,37 +104,54 @@ class Registry:
             },
         }
 
-    def register(self, name, capabilities, *, requires=(), defaults=None):
-        if not isinstance(name, str) or not name or name in self.plugins:
+    def register(self, name, capability, implementation, *, requires=(), defaults=None):
+        if not isinstance(name, str) or not name.strip() or name != name.strip() or name in self.plugins:
             raise AutoSTACGISError(f"Duplicate or invalid implementation plugin: {name}")
-        if not isinstance(capabilities, Mapping) or not capabilities:
-            raise AutoSTACGISError(f"Plugin {name} must expose a capability mapping")
-        for capability, implementation in capabilities.items():
-            if capability not in INTERFACES or not callable(implementation):
-                raise AutoSTACGISError(f"Invalid implementation capability: {name}/{capability}")
-            if capability in ("data_out", "encode", "data_transfer"):
-                for field in ("input_types", "output_types"):
-                    types = getattr(implementation, field, None)
-                    if (
-                        not isinstance(types, (list, tuple))
-                        or not types
-                        or any(not isinstance(t, str) or not t for t in types)
-                    ):
-                        raise AutoSTACGISError(
-                            f"{name}/{capability}: {field} must declare supported exchange types"
-                        )
-        if isinstance(requires, str) or any(not isinstance(dep, str) or not dep for dep in requires):
+        if not isinstance(capability, str) or capability not in INTERFACES or not callable(implementation):
+            raise AutoSTACGISError(
+                f"Plugin {name} must declare exactly one valid capability and implementation"
+            )
+        if capability in ("data_out", "encode", "data_transfer"):
+            for field in ("input_types", "output_types"):
+                types = getattr(implementation, field, None)
+                if (
+                    not isinstance(types, (list, tuple))
+                    or not types
+                    or any(not isinstance(t, str) or not t for t in types)
+                ):
+                    raise AutoSTACGISError(
+                        f"{name}/{capability}: {field} must declare supported exchange types"
+                    )
+        if not isinstance(requires, (list, tuple)) or any(
+            not isinstance(dep, str) or not dep.strip() or dep != dep.strip() for dep in requires
+        ):
             raise AutoSTACGISError(f"Invalid plugin dependencies: {name}")
         if len(set(requires)) != len(requires):
             raise AutoSTACGISError(f"Duplicate plugin dependency: {name}")
-        self.plugins[name] = dict(capabilities)
+        if capability in ("goal", "solver"):
+            from .solvers import validate_contract
+
+            validate_contract(name, capability, implementation, requires)
+        self.plugins[name] = {capability: implementation}
         self.requirements[name] = tuple(requires)
-        self.defaults[name] = defaults or {}
+        self.defaults[name] = {capability: defaults or {}}
+
+    @staticmethod
+    def validate_module(module):
+        if hasattr(module, "IMPLEMENTATIONS") or not all(
+            hasattr(module, field) for field in ("ID", "CAPABILITY", "IMPLEMENTATION", "REQUIRES")
+        ):
+            raise AutoSTACGISError(
+                "Plugin modules must explicitly declare ID, CAPABILITY, IMPLEMENTATION, and REQUIRES; "
+                "plural IMPLEMENTATIONS declarations are not supported"
+            )
 
     def register_module(self, module):
+        self.validate_module(module)
         self.register(
             module.ID,
-            module.IMPLEMENTATIONS,
+            module.CAPABILITY,
+            module.IMPLEMENTATION,
             requires=module.REQUIRES,
             defaults=getattr(module, "DEFAULTS", {}),
         )

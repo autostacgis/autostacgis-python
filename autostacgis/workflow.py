@@ -218,7 +218,9 @@ def stages(planner):
                 if isinstance(value, dict):
                     continue
                 if len(predicted[port]) != 1 or produced.get(port):
-                    raise AutoSTACGISError(f"{label}.{port}: one explicit path requires exactly one output Item")
+                    raise AutoSTACGISError(
+                        f"{label}.{port}: one explicit path requires exactly one output Item"
+                    )
                 path = str(p.app.path(value[5:]))
                 if path in destinations:
                     raise AutoSTACGISError(f"Duplicate output path: {path}")

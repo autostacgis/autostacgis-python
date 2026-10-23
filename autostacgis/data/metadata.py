@@ -46,7 +46,11 @@ def refresh_metadata(record):
     key = record.runtime.get("selected_asset", "data")
     old = record.item.get("assets", {}).get(key, {})
     record.item["assets"] = {
-        key: {**deepcopy(old), "href": f"autostacgis://runtime/{record.key}", "roles": old.get("roles", ["data"])}
+        key: {
+            **deepcopy(old),
+            "href": f"autostacgis://runtime/{record.key}",
+            "roles": old.get("roles", ["data"]),
+        }
     }
     asset = record.item["assets"][key]
     asset.pop("type", None)

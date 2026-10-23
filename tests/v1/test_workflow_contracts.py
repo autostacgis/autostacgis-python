@@ -5,21 +5,21 @@ from dataclasses import replace
 
 import numpy as np
 import pytest
+from autostacgis_plugins.common_crs import common_crs
+from autostacgis_plugins.register_to_reference import register_to_reference
 from helpers import scene, subset
 from shapely.geometry import box
 
 from autostacgis import Application, Record
 from autostacgis.data import ArrayRaster, Grid, Window, vectors
 from autostacgis.errors import AutoSTACGISError, NoPlan
-from autostacgis.plugins.common_crs import common_crs
-from autostacgis.plugins.register_to_reference import register_to_reference
 
 
 def test_rpc_survives_stac_py6s_and_lazy_orthorectification(context):
     import os
 
-    from autostacgis.plugins.atmospheric_correction import atmospheric_correction
-    from autostacgis.plugins.orthorectify_rpc import orthorectify_rpc
+    from autostacgis_plugins.atmospheric_correction import atmospheric_correction
+    from autostacgis_plugins.orthorectify_rpc import orthorectify_rpc
 
     executable = os.environ.get("AUTOSTACGIS_TEST_SIXS")
     if not executable:
@@ -79,15 +79,48 @@ def test_rpc_survives_stac_py6s_and_lazy_orthorectification(context):
 def test_pansharpen_requires_affine_grids_but_not_projected_crs():
     ms, pan = scene(), scene("pan", "panchromatic_imagery", count=1)
     app = Application(subset("pansharpen"))
-    assert len(app.plan({"version": "1.0.0", "goal": {"plugin": "pansharpened"}}, [ms, pan]).steps) == 1
+    assert (
+        len(
+            app.plan(
+                {
+                    "version": "1.0.0",
+                    "goal": {
+                        "for_each": {
+                            "kind": "raster",
+                            "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                            "require": {
+                                "all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]
+                            },
+                        }
+                    },
+                },
+                [ms, pan],
+            ).steps
+        )
+        == 1
+    )
     for record in [ms, pan]:
         record.item["assets"]["data"]["data_state:georeferencing"] = "rpc"
     with pytest.raises(NoPlan):
-        app.plan({"version": "1.0.0", "goal": {"plugin": "pansharpened"}}, [ms, pan])
+        app.plan(
+            {
+                "version": "1.0.0",
+                "goal": {
+                    "for_each": {
+                        "kind": "raster",
+                        "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                        "require": {
+                            "all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]
+                        },
+                    }
+                },
+            },
+            [ms, pan],
+        )
 
 
 def test_surface_reflectance_pan_radiance_normalization(context):
-    from autostacgis.plugins.pansharpen import pansharpen
+    from autostacgis_plugins.pansharpen import pansharpen
 
     ms, pan = scene(value=0.2), scene("pan", "panchromatic_imagery", count=1, value=100)
     ms.item["assets"]["data"]["cf:standard_name"] = "surface_bidirectional_reflectance"
@@ -102,8 +135,7 @@ def test_surface_reflectance_pan_radiance_normalization(context):
 
 def test_cloud_inference_is_lazy_tiled_and_uses_standard_band_order(context, monkeypatch):
     import omnicloudmask
-
-    from autostacgis.plugins.detect_clouds import detect_clouds
+    from autostacgis_plugins.detect_clouds import detect_clouds
 
     calls = []
 
@@ -137,8 +169,7 @@ def test_cloud_inference_is_lazy_tiled_and_uses_standard_band_order(context, mon
 
 def test_installed_omnicloudmask_array_api_accepts_streamed_tiles():
     import torch
-
-    from autostacgis.plugins.detect_clouds import CloudRaster
+    from autostacgis_plugins.detect_clouds import CloudRaster
 
     class ShadowModel(torch.nn.Module):
         def forward(self, values):
@@ -161,7 +192,7 @@ def test_installed_omnicloudmask_array_api_accepts_streamed_tiles():
 
 
 def test_seamline_mask_keeps_only_assigned_image(context):
-    from autostacgis.plugins.mask_by_polygons import mask_by_polygons
+    from autostacgis_plugins.mask_by_polygons import mask_by_polygons
 
     image = scene("derived")
     image.runtime["source_id"] = "one"
@@ -216,7 +247,7 @@ def test_reference_registration_exports_actual_model_and_ties(context):
 
 
 def test_joint_registration_keeps_the_actual_spectralmatch_solution(context, tmp_path):
-    from autostacgis.plugins.joint_coregistration import joint_coregistration
+    from autostacgis_plugins.joint_coregistration import joint_coregistration
 
     records = [scene("one", count=1), scene("two", count=1)]
     grid = Grid(32, 32, 1, "float32", (1, 0, 500000, 0, -1, 2400000), "EPSG:32604")
@@ -252,14 +283,14 @@ def test_joint_registration_keeps_the_actual_spectralmatch_solution(context, tmp
 @pytest.mark.parametrize("seamline_method", ["weighted", "markov"])
 def test_collection_normalize_seamline_mask_mosaic_io(context, tmp_path, seamline_method):
     """Real SpectralMatch -> Arrow polygons -> streamed masks -> GDAL mosaic."""
-    from autostacgis.plugins.clean_footprints import clean_footprints
-    from autostacgis.plugins.extract_footprints import extract_footprints
-    from autostacgis.plugins.global_radiometric_match import global_radiometric_match
-    from autostacgis.plugins.local_radiometric_match import local_radiometric_match
-    from autostacgis.plugins.markov_seamlines import markov_seamlines
-    from autostacgis.plugins.mask_by_polygons import mask_by_polygons
-    from autostacgis.plugins.mosaic import mosaic
-    from autostacgis.plugins.weighted_seamlines import weighted_seamlines
+    from autostacgis_plugins.clean_footprints import clean_footprints
+    from autostacgis_plugins.extract_footprints import extract_footprints
+    from autostacgis_plugins.global_radiometric_match import global_radiometric_match
+    from autostacgis_plugins.local_radiometric_match import local_radiometric_match
+    from autostacgis_plugins.markov_seamlines import markov_seamlines
+    from autostacgis_plugins.mask_by_polygons import mask_by_polygons
+    from autostacgis_plugins.mosaic import mosaic
+    from autostacgis_plugins.weighted_seamlines import weighted_seamlines
 
     records = [scene("one"), scene("two")]
     values = (np.arange(4096).reshape(64, 64) % 311 + 100).astype("float32")
@@ -319,8 +350,8 @@ def test_collection_normalize_seamline_mask_mosaic_io(context, tmp_path, seamlin
 
 
 def test_atmosphere_inventory_is_per_scene_day_and_named_check_rejects_wrong_day():
-    from autostacgis.plugins.atmosphere import AtmosphereSource
-    from autostacgis.plugins.atmosphere_for_image import atmosphere_for_image
+    from autostacgis_plugins.atmosphere import AtmosphereSource
+    from autostacgis_plugins.atmosphere_for_image import atmosphere_for_image
 
     images = [scene("one"), scene("two")]
     images[1].item["properties"]["datetime"] = "2024-01-02T12:00:00Z"

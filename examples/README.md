@@ -14,7 +14,7 @@ output, and work paths resolve from the example's folder.
 | [mosaic](mosaic/config.yaml) | Build seamlines and a surface-reflectance mosaic covering the requested area. | Projected multispectral surface-reflectance imagery on a common CRS, with STAC sidecars in `data/`; adjust the area. Install SpectralMatch for footprint cleanup and seamlines. |
 | [mosaic-explicit](mosaic-explicit/config.yaml) | Declare alignment, footprints, cleanup, seamlines, masking, and mosaicking in a strict sequence with native input links. | Affine-georeferenced multispectral surface-reflectance imagery and STAC sidecars in `data/`; adjust the area. Install SpectralMatch. |
 | [worldview](worldview/config.yaml) | Process raw WorldView imagery through correction, registration, normalization, and mosaicking. | Set imagery, DEM, and reference paths in `config.yaml`; matching local MUL/PAN products become two assets in one Item. Install the native dependencies. |
-| [custom-plugin](custom-plugin/) | Author a processing plugin with a streaming scale kernel. | Read or import `scale_plugin.py`. |
+| [custom plugin](https://github.com/autostacgis/autostacgis-plugins/blob/main/examples/scale_plugin.py) | Author a processing plugin with a streaming scale kernel. | Read or import `scale_plugin.py`. |
 
 Run from the repository root after installing AutoSTACGIS:
 

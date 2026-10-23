@@ -2,10 +2,9 @@
 
 from copy import deepcopy
 
-from shapely.geometry import box, shape
-
 from .contracts import test, value
 from .errors import AutoSTACGISError, NoPlan
+from .spatial import covers, geometry
 
 
 def selected(record, selector):
@@ -14,8 +13,13 @@ def selected(record, selector):
     if test(record, selector.get("require", selector.get("metadata", {}))) is not True:
         return False
     if "bbox" in selector or "intersects" in selector:
-        area = box(*selector["bbox"]) if "bbox" in selector else shape(selector["intersects"])
-        if not record.item.get("geometry") or not shape(record.item["geometry"]).intersects(area):
+        area = geometry(selector.get("bbox", selector.get("intersects")))
+        if area is None:
+            raise AutoSTACGISError("Invalid area-of-interest geometry")
+        extent = geometry(record.item.get("geometry"))
+        if extent is None:
+            extent = geometry(record.item.get("bbox"))
+        if extent is None or not extent.intersects(area):
             return False
     if "projected" in selector:
         from pyproj import CRS
@@ -61,19 +65,9 @@ def combine(alternatives):
 
 def compile_goal(goal, records, context, active=()):
     if "plugin" in goal:
-        name = goal["plugin"]
-        if name in active:
-            raise AutoSTACGISError("Recursive goal plugin: " + " -> ".join((*active, name)))
-        if active:
-            from .dependencies import require
+        from .solvers import expand_goal
 
-            require(context.plugins, context.registry, active[-1], name)
-        definition, settings = context.resolve_call("goal", goal)
-        function = context.registry.resolve("goal", definition["implementation"])
-        expanded = function(settings, records, context)
-        from .config import validate
-
-        return compile_goal(validate(expanded, "goal"), records, context, (*active, name))
+        return compile_goal(expand_goal(goal, records, context, active), records, context)
     if "all_of" in goal:
         return combine([compile_goal(g, records, context, active) for g in goal["all_of"]])
     if "any_of" in goal:
@@ -104,6 +98,7 @@ def compile_goal(goal, records, context, active=()):
                     "require": spec.get("require", {}),
                     "member": r.key,
                     **({"publish": spec["publish"]} if "publish" in spec else {}),
+                    **({"coverage": spec["coverage"]} if "coverage" in spec else {}),
                 }
                 for r in chosen
             ]
@@ -138,16 +133,17 @@ def satisfies(record, constraint):
         return False
     if "coverage" in constraint:
         rule = constraint["coverage"]
-        if rule.get("mode", "footprint") != "footprint" and "path" not in rule:
-            raise AutoSTACGISError("Valid-data coverage requires a metadata geometry path")
-        geometry = (
+        mode = rule.get("mode", "footprint")
+        if mode not in ("footprint", "bbox") and "path" not in rule:
+            raise AutoSTACGISError(f"{mode} coverage requires a metadata geometry path")
+        extent = (
             record.item.get("geometry")
-            if rule.get("mode", "footprint") == "footprint"
+            if mode == "footprint"
+            else record.item.get("bbox")
+            if mode == "bbox"
             else value(record, rule["path"])
         )
-        if not isinstance(geometry, dict):
-            return False
-        if not shape(geometry).covers(shape(rule["geometry"])):
+        if covers(extent, rule["geometry"]) is not True:
             return False
     return True
 

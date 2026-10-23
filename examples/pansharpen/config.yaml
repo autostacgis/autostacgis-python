@@ -3,7 +3,6 @@ catalog:
   plugins:
   - use: stac-resolver
   - use: pansharpen
-  - use: pansharpened
   - use: executor
   - use: events
   - use: zarr
@@ -12,8 +11,12 @@ request:
   sources:
   - stac-resolver
   goal:
-    plugin: pansharpened
-    settings:
+    for_each:
+      kind: raster
+      select:
+        assets.$asset.data_state:spectral_sampling: multispectral
+      require:
+        assets.$asset.data_state:pansharpened: true
       publish:
         encode:
           plugin: zarr

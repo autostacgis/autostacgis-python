@@ -3,21 +3,21 @@ from dataclasses import replace
 import numpy as np
 import pyarrow as pa
 import pytest
+from autostacgis_plugins.align_grid import align_grid
+from autostacgis_plugins.atmospheric_correction import atmospheric_correction
+from autostacgis_plugins.band_math import band_math
+from autostacgis_plugins.clean_footprints import clean_footprints
+from autostacgis_plugins.extract_footprints import extract_footprints
+from autostacgis_plugins.mask_by_polygons import mask_by_polygons
+from autostacgis_plugins.polygonize import polygonize
+from autostacgis_plugins.rasterize_point_attribute import rasterize_point_attribute
+from autostacgis_plugins.statistics import statistics
 from helpers import scene
 from shapely.geometry import box
 
 from autostacgis import Record
 from autostacgis.data import ArrayRaster, Batches, Grid, Window, vectors
 from autostacgis.data.writers import write_parquet
-from autostacgis.plugins.align_grid import align_grid
-from autostacgis.plugins.atmospheric_correction import atmospheric_correction
-from autostacgis.plugins.band_math import band_math
-from autostacgis.plugins.clean_footprints import clean_footprints
-from autostacgis.plugins.extract_footprints import extract_footprints
-from autostacgis.plugins.mask_by_polygons import mask_by_polygons
-from autostacgis.plugins.polygonize import polygonize
-from autostacgis.plugins.rasterize_point_attribute import rasterize_point_attribute
-from autostacgis.plugins.statistics import statistics
 
 
 def test_band_math_and_statistics(context):
@@ -145,7 +145,7 @@ def test_py6s_real_native_executable(context):
 def test_real_global_normalization(context):
     pytest.importorskip("osgeo")
     pytest.importorskip("spectralmatch")
-    from autostacgis.plugins.global_radiometric_match import global_radiometric_match
+    from autostacgis_plugins.global_radiometric_match import global_radiometric_match
 
     grid = Grid(32, 32, 3, "float32", (1, 0, 500000, 0, -1, 2400000), "EPSG:32604")
     values = np.stack([np.arange(1024).reshape(32, 32) + 100 + i for i in range(3)]).astype("float32")
@@ -162,8 +162,8 @@ def test_real_global_normalization(context):
 def test_real_seamline_adapters(context):
     pytest.importorskip("osgeo")
     pytest.importorskip("spectralmatch")
-    from autostacgis.plugins.voronoi_seamlines import voronoi_seamlines
-    from autostacgis.plugins.weighted_seamlines import weighted_seamlines
+    from autostacgis_plugins.voronoi_seamlines import voronoi_seamlines
+    from autostacgis_plugins.weighted_seamlines import weighted_seamlines
 
     images = [scene("one"), scene("two")]
     images[1].payload = ArrayRaster(
@@ -235,7 +235,7 @@ def test_collection_backend_contract(context, monkeypatch, plugin, backend, stat
                 result = None
 
     monkeypatch.setattr(spectralmatch, backend, run_backend)
-    process = getattr(import_module(f"autostacgis.plugins.{plugin}"), plugin)
+    process = getattr(import_module(f"autostacgis_plugins.{plugin}"), plugin)
     settings = {"threshold": 7, "tile_threads": 99, "io_threads": 99, "concurrent_processing": 99}
     if not produce_outputs:
         with pytest.raises(AutoSTACGISError, match=f"{backend} did not create"):
@@ -292,7 +292,7 @@ def test_seamline_backend_contract(context, monkeypatch, plugin, backend):
         frame.to_file(output_mask, driver="GPKG")
 
     monkeypatch.setattr(spectralmatch, backend, run_backend)
-    process = getattr(import_module(f"autostacgis.plugins.{plugin}"), plugin)
+    process = getattr(import_module(f"autostacgis_plugins.{plugin}"), plugin)
     output = process(
         {"footprints": [footprints], "images": images},
         {"custom_option": 7, "image_threads": 99, "io_threads": 99, "tile_threads": 99},

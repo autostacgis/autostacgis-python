@@ -56,6 +56,9 @@ class Plan:
     cost: float
     status: str = "synthesized"
     report: dict = field(default_factory=dict)
+    module_contracts: dict = field(default_factory=dict, repr=False)
+    parameter_templates: dict = field(default_factory=dict, repr=False)
+    output_policies: dict = field(default_factory=dict, repr=False)
 
     def to_dict(self):
         from dataclasses import asdict

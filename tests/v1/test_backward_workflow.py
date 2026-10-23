@@ -17,8 +17,16 @@ def test_namespace_loads_only_selected_entrypoints(monkeypatch):
 
     def provider():
         loaded.append("selected")
+
+        def goal(settings, records, context):
+            return {"output": {}}
+
+        goal.contract = {
+            "solver": "backward_chain",
+            "settings_schema": {"type": "object", "properties": {}, "additionalProperties": False},
+        }
         return SimpleNamespace(
-            ID="custom", REQUIRES=(), IMPLEMENTATIONS={"goal": lambda s, r, c: {"output": {}}}
+            ID="custom", REQUIRES=("backward_chain",), CAPABILITY="goal", IMPLEMENTATION=goal
         )
 
     def unused():
@@ -33,7 +41,7 @@ def test_namespace_loads_only_selected_entrypoints(monkeypatch):
         ],
     )
     app = Application({"version": "1.0.0", "plugins": [{"use": "custom"}]})
-    assert set(app.plugins) == {"custom", "buffered-transfer"} and loaded == ["selected"]
+    assert set(app.plugins) == {"custom", "backward_chain", "buffered-transfer"} and loaded == ["selected"]
 
 
 def test_namespace_can_configure_dependency_by_qualified_module(tmp_path):
@@ -42,7 +50,7 @@ def test_namespace_can_configure_dependency_by_qualified_module(tmp_path):
             "version": "1.0.0",
             "plugins": [
                 {"use": "pansharpen"},
-                {"use": "autostacgis.plugins.storage", "settings": {"tile_size": 256}},
+                {"use": "autostacgis_plugins.storage", "settings": {"tile_size": 256}},
             ],
         }
     )
@@ -73,9 +81,9 @@ def test_competing_algorithms_require_explicit_selection():
 
 
 def test_dem_mean_ignores_invalid_pixels_and_supplies_py6s(context, monkeypatch):
-    import autostacgis.plugins.atmospheric_correction as correction
-    from autostacgis.plugins.atmospheric_correction import atmospheric_correction
-    from autostacgis.plugins.sample_dem import sample_dem
+    import autostacgis_plugins.atmospheric_correction as correction
+    from autostacgis_plugins.atmospheric_correction import atmospheric_correction
+    from autostacgis_plugins.sample_dem import sample_dem
 
     image, dem = scene(count=1), scene("dem", "digital_elevation_model", count=1)
     dem.payload = ArrayRaster(
@@ -156,9 +164,9 @@ def test_masking_lowers_registration_and_normalization_costs(name, port):
 
 
 def test_planned_dem_summary_is_consumed_by_py6s(tmp_path, monkeypatch):
+    import autostacgis_plugins.atmospheric_correction as correction
     import pyarrow as pa
 
-    import autostacgis.plugins.atmospheric_correction as correction
     from autostacgis.data import Batches
 
     image, dem, atmosphere = scene(count=1), scene("dem", "digital_elevation_model", count=1), scene("air")

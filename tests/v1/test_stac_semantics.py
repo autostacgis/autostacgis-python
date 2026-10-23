@@ -33,7 +33,25 @@ def test_quantity_alone_does_not_satisfy_physical_product_goal(tmp_path, unit):
     )
     with pytest.raises(NoPlan):
         Application(subset(), base_dir=tmp_path).plan(
-            {"version": "1.0.0", "goal": {"plugin": "surface-reflectance"}}, [image]
+            {
+                "version": "1.0.0",
+                "goal": {
+                    "for_each": {
+                        "kind": "raster",
+                        "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                        "require": {
+                            "all": [
+                                {
+                                    "path": "assets.$asset.cf:standard_name",
+                                    "equals": "surface_bidirectional_reflectance",
+                                },
+                                {"path": "assets.$asset.unit", "equals": "1"},
+                            ]
+                        },
+                    }
+                },
+            },
+            [image],
         )
 
 
@@ -46,7 +64,17 @@ def test_pansharpen_decodes_scale_offset_and_updates_band_state(tmp_path):
     pan.item["assets"]["data"].update({"raster:scale": 0.0001, "raster:offset": 0})
     before = deepcopy(image.item)
     with Application(subset("pansharpen"), base_dir=tmp_path).run(
-        {"version": "1.0.0", "goal": {"plugin": "pansharpened"}}, [image, pan]
+        {
+            "version": "1.0.0",
+            "goal": {
+                "for_each": {
+                    "kind": "raster",
+                    "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
+                    "require": {"all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]},
+                }
+            },
+        },
+        [image, pan],
     ) as run:
         result = run.records[0]
         np.testing.assert_allclose(result.payload.read(Window(0, 0, 4, 4)).pixels, 0.05)
@@ -123,9 +151,8 @@ def test_eodag_rules_use_same_standard_fields_and_retain_provider_metadata():
 
 
 def test_eoreader_enrichment_reconciles_existing_asset_identity(tmp_path, monkeypatch):
+    from autostacgis_plugins.eoreader import eoreader_metadata
     from eoreader.reader import Reader
-
-    from autostacgis.plugins.eoreader import eoreader_metadata
 
     path = tmp_path / "scene.tif"
     path.touch()

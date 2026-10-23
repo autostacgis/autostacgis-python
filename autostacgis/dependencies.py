@@ -69,7 +69,7 @@ class PluginContext:
         self.configured = configured_plugins(options or {})
 
     def __getattr__(self, name):
-        if name in ("registry", "active_services", "sources", "invoke", "resolve_call"):
+        if name in ("registry", "active_services", "sources", "acquirers", "invoke", "resolve_call"):
             raise AutoSTACGISError("Use context.call() or context.service() for declared plugin dependencies")
         return getattr(self._app, name)
 
@@ -95,6 +95,14 @@ class PluginContext:
         if self._app.active_services is None:
             raise AutoSTACGISError("Runtime services are only available during execution")
         return self._app.active_services.get(name, caller=self.owner)
+
+    def acquirer(self, name):
+        """Access a declared acquisition dependency, including its discovery session."""
+        require(self._app.plugins, self._app.registry, self.owner, name)
+        try:
+            return self._app.acquirers[name]
+        except KeyError:
+            raise AutoSTACGISError(f"Unavailable data_in plugin: {name}") from None
 
     def fresh(self):
         return type(self._app)(self._app.catalog, base_dir=self._app.base_dir, registry=self._app.registry)

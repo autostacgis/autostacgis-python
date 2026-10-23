@@ -7,7 +7,6 @@ catalog:
   - use: markov_seamlines
   - use: mask_by_polygons
   - use: mosaic
-  - use: output
   - use: executor
   - use: events
   - use: geotiff
@@ -17,22 +16,29 @@ request:
   - stac-resolver
   goal:
     all_of:
-    - plugin: mosaic
-      settings:
+    - output:
         name: result
-        area:
-        - -156
-        - 19
-        - -155
-        - 20
-    - plugin: output
-      settings:
-        name: result
+        kind: raster
         require:
+          assets.$asset.data_state:mosaic: true
           assets.$asset.cf:standard_name: surface_bidirectional_reflectance
           assets.$asset.unit: '1'
-    - plugin: output
-      settings:
+        coverage:
+          geometry:
+            type: Polygon
+            coordinates:
+            - - - -155.0
+                - 19.0
+              - - -155.0
+                - 20.0
+              - - -156.0
+                - 20.0
+              - - -156.0
+                - 19.0
+              - - -155.0
+                - 19.0
+          mode: footprint
+    - output:
         name: result
         publish:
           encode:

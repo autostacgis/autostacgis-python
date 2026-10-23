@@ -13,4 +13,5 @@ dependencies:
   - pip:
       - -e external/eodag
       - -e external/eoreader
-      - -e .[dev,atmosphere,spectralmatch,registration,cloud,pointcloud,distributed,scheduler,s3,telemetry]
+      - -e .[dev]
+      - -e ../autostacgis-plugins[dev,atmosphere,spectralmatch,registration,cloud,pointcloud,distributed,scheduler,s3,telemetry]

@@ -8,9 +8,14 @@ Use `stac-resolver` for ordinary local rasters with exact `.tif.stac.json` sidec
 them; EODAG maps `area` to its geographic search. EOReader's local search uses its
 filesystem pattern. There is no separate glob or enrichment stage in configuration.
 
-`data_in` acquires selected assets after planning. EODAG and remote providers can
-supply both capabilities and share their search/download session. Available local
-assets need no download. Core replans if acquisition changes the metadata.
+`data_in` acquires selected assets after planning. Discovery and acquisition are
+separate plugin registrations: `eodag` uses `eodag-download`, `dem` uses
+`dem-download`, `atmosphere` uses `atmosphere-download`, and `stac-source` uses
+`stac-source-download`. Each discovery adapter declares its acquisition dependency
+and explicitly routes discovered records to it. EODAG retains each product with its
+discovery session through scoped access to its downloader. Acquisition settings
+belong to the download registration. Available local assets need no download. Core
+replans if acquisition changes the metadata.
 
 ## Routing collections
 
