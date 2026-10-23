@@ -16,6 +16,7 @@ dependencies = [
   "pyarrow>=19,<27", "zarr>=3,<4", "numexpr>=2,<3", "threadpoolctl>=3,<4"
 ]
 [project.optional-dependencies]
+triggers = ["APScheduler>=3.11,<4", "watchdog>=6,<7"]
 dev = ["pytest>=8,<10", "ruff>=0.12", "build>=1,<2"]
 [project.scripts]
 autostacgis = "autostacgis.cli:main"

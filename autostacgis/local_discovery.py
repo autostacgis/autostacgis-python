@@ -16,6 +16,13 @@ class LocalFiles:
         paths = sorted(
             set(glob.iglob(settings.get("search_glob", "**/*.tif"), root_dir=str(root), flags=flags))
         )
+        if "files" in query:
+            if not isinstance(query["files"], list) or any(
+                not isinstance(path, str) for path in query["files"]
+            ):
+                raise AutoSTACGISError("query.files must be an array of file paths")
+            chosen = {app.path(path) for path in query["files"]}
+            paths = [match for match in paths if (root / match).resolve() in chosen]
         seen = set()
         for match in paths:
             path = (root / match).resolve()

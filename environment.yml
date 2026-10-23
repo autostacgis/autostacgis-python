@@ -14,4 +14,4 @@ dependencies:
       - -e external/eodag
       - -e external/eoreader
       - -e .[dev]
-      - -e ../autostacgis-plugins[dev,atmosphere,spectralmatch,registration,cloud,pointcloud,distributed,scheduler,s3,telemetry]
+      - -e ../autostacgis-plugins[dev,atmosphere,spectralmatch,registration,cloud,pointcloud,distributed,triggers,s3,telemetry]

@@ -114,3 +114,5 @@ Each plugin declares one `CAPABILITY` and one `IMPLEMENTATION`. See the
 for split registration names and import changes.
 
 Goal presets now live in configuration. Select one solver with `solver: {plugin: backward_chain, settings: {timeout: 120}}`. Generic goal adapters must declare that solver as a named dependency and expose parameter schemas; see [solver contracts](https://github.com/autostacgis/autostacgis-plugins/blob/main/docs/solvers.md).
+
+Timed and file-based automation use the native [APScheduler and watchdog triggers](docs/triggers.md), exposed by separate single-capability plugins.

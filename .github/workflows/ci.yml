@@ -19,7 +19,7 @@ jobs:
         with:
           repository: autostacgis/autostacgis-plugins
           path: standard-plugins
-      - run: pip install -e '.[dev]' -e 'standard-plugins[scheduler,distributed,pointcloud]'
+      - run: pip install -e '.[dev]' -e 'standard-plugins[triggers,distributed,pointcloud]'
       - run: ruff check autostacgis tests tools examples && ruff format --check autostacgis tests tools examples
       - run: python tools/check_spec.py
       - run: pytest
@@ -39,6 +39,6 @@ jobs:
           environment-name: autostacgis
           create-args: python=3.12 gdal>=3.11 muparser sixs pip
       - shell: bash -el {0}
-        run: pip install -e '.[dev]' -e 'standard-plugins[atmosphere,scheduler,spectralmatch]' -e external/eodag -e external/eoreader
+        run: pip install -e '.[dev]' -e 'standard-plugins[atmosphere,triggers,spectralmatch]' -e external/eodag -e external/eoreader
       - shell: bash -el {0}
         run: pytest

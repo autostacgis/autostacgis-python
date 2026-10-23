@@ -132,7 +132,7 @@ class Application:
                             getattr(function, "contract", {}).get("settings", {}),
                             entry.get("settings", {}),
                         ),
-                        partial=capability in ("process", "data_out", "goal"),
+                        partial=capability in ("process", "data_out", "goal", "trigger"),
                     )
                 self.capabilities[capability][name] = entry
         validate_dependencies(self.plugins, self.registry)
@@ -442,7 +442,7 @@ class Application:
                 inspected.add(key)
 
     def trigger(self, name, request=None):
-        definition = self.capabilities["trigger"][name]
+        definition, settings = self.resolve_call("trigger", {"plugin": name})
         return self.registry.resolve("trigger", definition["implementation"])(
-            self.scope(name), definition.get("settings", {}), request
+            self.scope(name), settings, request
         )
