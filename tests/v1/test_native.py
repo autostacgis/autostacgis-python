@@ -12,7 +12,7 @@ from autostacgis_plugins.mask_by_polygons import mask_by_polygons
 from autostacgis_plugins.polygonize import polygonize
 from autostacgis_plugins.rasterize_point_attribute import rasterize_point_attribute
 from autostacgis_plugins.statistics import statistics
-from helpers import scene
+from helpers import require_extra, scene
 from shapely.geometry import box
 
 from autostacgis import Record
@@ -39,6 +39,8 @@ def test_grid_alignment_native(context):
 
 
 def test_mask_polygonize_and_clean_preserves_attributes(context):
+    require_extra("geopandas")
+    require_extra("spectralmatch")
     mask = Record(
         scene().item,
         kind="vector",

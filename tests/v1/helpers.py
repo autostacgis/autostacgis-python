@@ -53,3 +53,16 @@ def subset(*names):
     config["plugins"] = [p for p in config["plugins"] if p["id"] in wanted]
     config["runtime"]["executor"]["settings"]["workers"] = 2
     return config
+
+
+def require_extra(module, distribution=None):
+    """Run scientific integration tests only when their optional SDK is installed."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    import pytest
+
+    try:
+        version(distribution or module)
+    except PackageNotFoundError:
+        pytest.skip(f"Optional integration requires {distribution or module}")
+    return pytest.importorskip(module)

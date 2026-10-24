@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from helpers import scene, subset
+from helpers import require_extra, scene, subset
 
 from autostacgis import Application
 from autostacgis.data import ArrayRaster, Grid
@@ -218,6 +218,8 @@ def test_planned_dem_summary_is_consumed_by_py6s(tmp_path, monkeypatch):
 
 
 def test_automatically_planned_normalization_to_markov_mosaic_executes(tmp_path):
+    require_extra("spectralmatch")
+    require_extra("geopandas")
     from autostacgis.data import Window
     from autostacgis.data.metadata import refresh_metadata
 

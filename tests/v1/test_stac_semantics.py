@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from helpers import scene, subset
+from helpers import require_extra, scene, subset
 
 from autostacgis import Application
 from autostacgis.data import Window
@@ -151,6 +151,7 @@ def test_eodag_rules_use_same_standard_fields_and_retain_provider_metadata():
 
 
 def test_eoreader_enrichment_reconciles_existing_asset_identity(tmp_path, monkeypatch):
+    require_extra("eoreader")
     from autostacgis_plugins.eoreader import eoreader_metadata
     from eoreader.reader import Reader
 

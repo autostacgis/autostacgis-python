@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from autostacgis_plugins.common_crs import common_crs
 from autostacgis_plugins.register_to_reference import register_to_reference
-from helpers import scene, subset
+from helpers import require_extra, scene, subset
 from shapely.geometry import box
 
 from autostacgis import Application, Record
@@ -134,6 +134,7 @@ def test_surface_reflectance_pan_radiance_normalization(context):
 
 
 def test_cloud_inference_is_lazy_tiled_and_uses_standard_band_order(context, monkeypatch):
+    require_extra("omnicloudmask")
     import omnicloudmask
     from autostacgis_plugins.detect_clouds import detect_clouds
 
@@ -168,6 +169,8 @@ def test_cloud_inference_is_lazy_tiled_and_uses_standard_band_order(context, mon
 
 
 def test_installed_omnicloudmask_array_api_accepts_streamed_tiles():
+    require_extra("torch")
+    require_extra("omnicloudmask")
     import torch
     from autostacgis_plugins.detect_clouds import CloudRaster
 
@@ -225,6 +228,7 @@ def test_common_crs_compares_equivalent_crs_and_rejects_mixed():
 
 
 def test_reference_registration_exports_actual_model_and_ties(context):
+    require_extra("coregix")
     rng = np.random.default_rng(19)
     pixels = rng.uniform(10, 200, (1, 256, 256)).astype("float32")
     moving, reference = scene("moving", count=1), scene("reference", count=1)
@@ -247,6 +251,7 @@ def test_reference_registration_exports_actual_model_and_ties(context):
 
 
 def test_joint_registration_keeps_the_actual_spectralmatch_solution(context, tmp_path):
+    require_extra("spectralmatch")
     from autostacgis_plugins.joint_coregistration import joint_coregistration
 
     records = [scene("one", count=1), scene("two", count=1)]
@@ -283,6 +288,8 @@ def test_joint_registration_keeps_the_actual_spectralmatch_solution(context, tmp
 @pytest.mark.parametrize("seamline_method", ["weighted", "markov"])
 def test_collection_normalize_seamline_mask_mosaic_io(context, tmp_path, seamline_method):
     """Real SpectralMatch -> Arrow polygons -> streamed masks -> GDAL mosaic."""
+    require_extra("spectralmatch")
+    require_extra("geopandas")
     from autostacgis_plugins.clean_footprints import clean_footprints
     from autostacgis_plugins.extract_footprints import extract_footprints
     from autostacgis_plugins.global_radiometric_match import global_radiometric_match
