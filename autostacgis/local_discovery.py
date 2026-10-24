@@ -1,10 +1,9 @@
 from pathlib import Path
-from urllib.parse import urlsplit
 
 from wcmatch import glob
 
 from .errors import AutoSTACGISError
-from .io import load_item, local
+from .io import is_local, load_item, local
 from .metadata import MISSING, assign, get
 from .model import Record, digest
 
@@ -36,7 +35,7 @@ class LocalFiles:
                     if not any(
                         local(a["href"]).resolve() == path
                         for a in item["assets"].values()
-                        if not urlsplit(a["href"]).scheme or a["href"].startswith("file:")
+                        if is_local(a["href"])
                     ):
                         raise AutoSTACGISError(f"Sidecar does not reference selected asset: {path}")
                 else:
@@ -48,7 +47,7 @@ class LocalFiles:
                         "properties": {},
                         "links": [],
                         "stac_extensions": [],
-                        "assets": {"data": {"href": str(path), "roles": ["data"]}},
+                        "assets": {"data": {"href": path.as_uri(), "roles": ["data"]}},
                     }
             for rule in settings.get("metadata_rules", []):
                 relative = str(path.relative_to(root)) if path.is_relative_to(root) else str(path)

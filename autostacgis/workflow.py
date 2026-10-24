@@ -276,19 +276,17 @@ def stages(planner):
 
 def persist(record, destination, initial, app):
     """Materialize only explicitly named outputs and carry their durable STAC href."""
-    from pathlib import Path
+    from .io import is_local, local
 
-    path = Path(destination)
-    from urllib.parse import unquote, urlsplit
+    path = local(destination)
 
     for source in initial.values():
         locations = [a.get("href", "") for a in source.item.get("assets", {}).values()]
         locations.extend(str(v) for v in source.runtime.get("local_assets", {}).values())
         for href in locations:
-            uri = urlsplit(href)
-            if uri.scheme not in ("", "file"):
+            if not is_local(href):
                 continue
-            location = Path(unquote(uri.path) if uri.scheme == "file" else href).resolve()
+            location = local(href).resolve()
             if location == path.resolve():
                 raise AutoSTACGISError(f"Output path would overwrite an input: {path}")
     from .publication import publish

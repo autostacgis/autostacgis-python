@@ -182,8 +182,8 @@ def test_byte_stream_processing_publishes_with_filesystem_and_stac(tmp_path):
     with app.run(req, [scene()]) as result:
         assert (tmp_path / "result.bin").read_bytes() == b"hello world"
         item = json.loads((tmp_path / "result.json").read_text())
-        assert item["assets"]["data"]["href"] == str(tmp_path / "result.bin")
-        assert result.records[0].item["properties"]["example:metadata"] == str(tmp_path / "result.json")
+        assert item["assets"]["data"]["href"] == (tmp_path / "result.bin").as_uri()
+        assert result.records[0].item["properties"]["example:metadata"] == (tmp_path / "result.json").as_uri()
 
 
 def test_incompatible_publication_rejected_before_processing(tmp_path):

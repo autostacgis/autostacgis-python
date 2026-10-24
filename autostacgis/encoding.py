@@ -31,13 +31,11 @@ def encode(record, settings, context, format):
 
 
 def embed(record, settings, context, format):
-    from urllib.parse import urlsplit
-
-    from .io import local
+    from .io import is_local, local
 
     key = record.runtime.get("selected_asset", "data")
     href = record.runtime.get("local_assets", {}).get(key, record.item["assets"][key]["href"])
-    if urlsplit(str(href)).scheme not in ("", "file"):
+    if not is_local(href):
         return record.item
     path = local(str(href))
     if format == "zarr":
@@ -70,12 +68,10 @@ def embed(record, settings, context, format):
 
 
 def restore(saved, record, settings, format):
-    from urllib.parse import urlsplit
-
     from .data import FileBatches, FileRaster, ZarrRaster
-    from .io import local
+    from .io import is_local, local
 
-    if urlsplit(str(saved.value)).scheme not in ("", "file"):
+    if not is_local(saved.value):
         return record.payload
     path = local(str(saved.value))
     if format == "zarr":

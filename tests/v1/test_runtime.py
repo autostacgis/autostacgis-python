@@ -159,7 +159,9 @@ def test_zarr_concurrent_chunks_and_stac_delivery(tmp_path):
         import zarr
 
         record = result.records[0]
-        path = record.item["assets"]["data"]["href"]
+        from autostacgis.io import local
+
+        path = local(record.item["assets"]["data"]["href"])
         assert zarr.open_group(path, mode="r").attrs["stac"] == record.item
         np.testing.assert_allclose(ZarrRaster(path).read(Window(0, 0, 4, 4)).pixels, 10)
     assert len(list((tmp_path / "output/stac").glob("*.json"))) == 1

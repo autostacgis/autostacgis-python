@@ -1,6 +1,7 @@
 from copy import deepcopy
 from pathlib import Path
-from urllib.parse import unquote, urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit
+from urllib.request import url2pathname
 
 import httpx
 
@@ -9,7 +10,24 @@ from .errors import AutoSTACGISError
 
 
 def local(href):
-    return Path(unquote(urlsplit(href).path)) if href.startswith("file:") else Path(href)
+    href = str(href)
+    if not href.startswith("file:"):
+        return Path(href)
+    uri = urlsplit(href)
+    path = uri.path
+    if uri.netloc and uri.netloc.lower() != "localhost":
+        path = "//" + uri.netloc + path
+    return Path(url2pathname(path))
+
+
+def is_local(href):
+    href = str(href)
+    return bool(Path(href).drive) or urlsplit(href).scheme in ("", "file")
+
+
+def file_reference(path):
+    """Return a valid STAC URI for a local file, including spaces and drive letters."""
+    return local(path).resolve().as_uri()
 
 
 def load_item(path):
@@ -21,11 +39,11 @@ def load_item(path):
         for asset in item.get("assets", {}).values():
             asset["href"] = urljoin(base, asset["href"])
     else:
-        path = Path(path).resolve()
+        path = local(path).resolve()
         item = read(path)
         for asset in item.get("assets", {}).values():
             if not urlsplit(asset["href"]).scheme:
-                asset["href"] = str((path.parent / asset["href"]).resolve())
+                asset["href"] = file_reference(path.parent / asset["href"])
     if item.get("type") != "Feature" or "stac_version" not in item:
         raise AutoSTACGISError(f"Not a STAC Item: {path}")
     return item
@@ -44,7 +62,8 @@ def merge_verified(original, additional):
 
 def asset_path(record, key=None):
     key = key or record.runtime.get("selected_asset", "data")
-    return record.runtime.get("local_assets", {}).get(key, record.item["assets"][key]["href"])
+    href = record.runtime.get("local_assets", {}).get(key, record.item["assets"][key]["href"])
+    return local(href) if is_local(href) else href
 
 
 def atomic_json(path, data):

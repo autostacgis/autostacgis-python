@@ -39,6 +39,8 @@ Shared execution services and the default transfer adapter are supplied automati
 
 Older `{catalog, request}` files and local Python request calls remain readable for compatibility. New GUI exports and published workflows use the grouped format. Contracts are installed code and cannot be replaced through configuration.
 
+Local STAC assets and published metadata references use `file://` URIs, including Windows drive letters, network shares, spaces, and Unicode filenames. Use `autostacgis.io.local(href)` to obtain a native filesystem path from a local reference.
+
 # Plugins and published workflows
 
 The Python library owns online discovery and checksum verification for both registries. GUIs call the connected backend, which delegates to this library. A normal QGIS installation does not need to install the processing engine inside QGIS's Python interpreter.

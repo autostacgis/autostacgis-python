@@ -2,6 +2,7 @@
 
 from .artifacts import accepted, artifact
 from .errors import AutoSTACGISError
+from .io import file_reference, is_local
 
 
 def call(value):
@@ -55,10 +56,12 @@ def _publish(app, record, policy):
         saved = writer(encoded, settings, app.scope(definition["id"], settings))
         accepted(saved, writer.output_types, owner=definition["id"])
         href = str(saved.value)
+        if saved.type == "path" and is_local(href):
+            href = file_reference(href)
         result.item["assets"][asset_key]["href"] = href
         if encoded.media_type:
             result.item["assets"][asset_key]["type"] = encoded.media_type
-        if "://" not in href or href.startswith("file:"):
+        if is_local(href):
             result.runtime.setdefault("local_assets", {})[asset_key] = href
         else:
             result.runtime.get("local_assets", {}).pop(asset_key, None)

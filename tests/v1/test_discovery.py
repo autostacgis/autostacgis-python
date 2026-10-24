@@ -17,7 +17,7 @@ def test_existing_sidecar_is_reused(tmp_path):
     image = scene()
     path = tmp_path / "scene.tif"
     write_raster(image.payload, path)
-    image.item["assets"]["data"]["href"] = str(path)
+    image.item["assets"]["data"]["href"] = path.as_uri()
     Stac.extensions(image.item)
     Path(str(path) + ".stac.json").write_text(json.dumps(image.item))
     config = subset("pansharpen")
@@ -143,12 +143,12 @@ def test_directory_root_recomputed_after_publication(tmp_path):
     app = Application(subset(), base_dir=tmp_path)
     published = publish(app, image, {"encode": {"plugin": "geotiff"}, "data_out": {"plugin": "filesystem"}})
     href = published.item["assets"]["data"]["href"]
-    assert published.item["properties"]["data_state:directory_root"] == str(Path(href).parent)
+    assert published.item["properties"]["data_state:directory_root"] == href.rsplit("/", 1)[0]
     import rasterio
 
     with rasterio.open(href) as source:
         embedded = json.loads(source.tags()["STAC"])
-        assert embedded["properties"]["data_state:directory_root"] == str(Path(href).parent)
+        assert embedded["properties"]["data_state:directory_root"] == href.rsplit("/", 1)[0]
 
 
 def test_grouped_worldview_enters_inventory_with_both_assets(tmp_path, monkeypatch):
