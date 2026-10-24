@@ -137,7 +137,11 @@ def test_module_entry_point_carries_dependencies(monkeypatch):
     import autostacgis.registry as module
 
     provider = SimpleNamespace(
-        ID="example", VERSION="1.0.0", REQUIRES=("storage",), CAPABILITY="process", IMPLEMENTATION=lambda *_: None
+        ID="example",
+        VERSION="1.0.0",
+        REQUIRES=("storage",),
+        CAPABILITY="process",
+        IMPLEMENTATION=lambda *_: None,
     )
     monkeypatch.setattr(
         module, "entry_points", lambda **_: [SimpleNamespace(name="example", load=lambda: provider)]
