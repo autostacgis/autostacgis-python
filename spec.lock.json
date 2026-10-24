@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/autostacgis/autostacgis",
   "version": "1.0.0",
-  "commit": "2c698874bfb56b4ce39bc132c768bf0e8c98b79d",
+  "commit": "e449895dadc663960d2b9507c5d2dcb735022ca9",
   "files": {
     "conformance/metadata.json": "b58e43d3eb6371c87797ce9448c7c07f93ad291fdaf59b11450b95e4266e7692",
     "extensions/cf/schema.json": "82e78eb4817065c2bd595337dd4d24128354b89625eb623ed134b763e9c60466",
@@ -18,9 +18,10 @@
     "extensions/sat/schema.json": "baf261cf89516f718292b1c38dd2a5510b7a5f62cac063805565ae2d2e7990ea",
     "extensions/view/schema.json": "6ac62fa971b486a031b39f8667b09f226257642cc36d7119e9ff02c0a75293d6",
     "schemas/catalog.json": "bcd27a6e7b36eec6f5b1672a756f75cf975bbb927022dc0f361ee3cf584b9eba",
-    "schemas/config.json": "169e7f4467f2380f5f3f30f6fdea2028b218e15adc4b2e8c9261d6eab20e80aa",
+    "schemas/config.json": "c4b90d21eb9d2b3a30e1a6033db992f00e55aa23d3cdb00aa75ee058a95294dc",
     "schemas/goal.json": "9b44573ae68ac9f8f1d18ad4f4d1a881964e7a2ead7db748c9ded9393d47abbf",
     "schemas/plugin.json": "ce5a0eff3fea8fed80406c18145111a3d1911d43a4157e63261e1193f24019b1",
-    "schemas/request.json": "da607084863ca5713d1bc2f6402168c24135b5c645092dc38af1f0c5ceab3909"
+    "schemas/request.json": "da607084863ca5713d1bc2f6402168c24135b5c645092dc38af1f0c5ceab3909",
+    "schemas/workflow.json": "0d7102ec2a17fc342ca49599c035d5b614b72549d26fcd9633c0da9787e06deb"
   }
 }

@@ -11,12 +11,12 @@ import tempfile
 from hashlib import sha256
 from pathlib import Path
 
-import httpx
 from packaging.requirements import Requirement
 from packaging.version import Version
 
 from .errors import AutoSTACGISError
 from .registry import CAPABILITIES
+from .remote_registry import RemoteRegistry
 
 REGISTRY_URL = "https://autostacgis.github.io/autostacgis-plugins/plugins.json"
 
@@ -24,7 +24,9 @@ REGISTRY_URL = "https://autostacgis.github.io/autostacgis-plugins/plugins.json"
 def metadata(source):
     """Read publication metadata without executing a submitted Python file."""
     tree = ast.parse(source)
-    values = {}
+    values = {"DESCRIPTION": ast.get_docstring(tree)}
+    if not values["DESCRIPTION"] or not values["DESCRIPTION"].strip():
+        raise AutoSTACGISError("Plugin must have a descriptive module docstring")
     for node in tree.body:
         if isinstance(node, ast.Assign):
             for name in node.targets:
@@ -36,7 +38,7 @@ def metadata(source):
                     "CAPABILITY",
                     "REQUIRES",
                     "DEPENDENCIES",
-                    "DESCRIPTION",
+                    "DEFAULT_CONFIG",
                 ):
                     values[name.id] = ast.literal_eval(node.value)
     for name in ("ID", "VERSION", "CAPABILITY", "REQUIRES"):
@@ -59,6 +61,11 @@ def metadata(source):
             raise AutoSTACGISError(f"Duplicate {key}")
     for dependency in values["DEPENDENCIES"]:
         Requirement(dependency)
+    from .workflow_config import referenced_plugins
+
+    values["REQUIRES"] = tuple(
+        dict.fromkeys((*values["REQUIRES"], *referenced_plugins(values.get("DEFAULT_CONFIG", {}))))
+    )
     return values
 
 
@@ -74,17 +81,7 @@ class PluginManager:
         return json.loads(path.read_text()) if path.exists() else {}
 
     def catalog(self):
-        if not self.registry_url.startswith("https://"):
-            raise AutoSTACGISError("Plugin manifest must use HTTPS")
-        response = httpx.get(self.registry_url, timeout=30, follow_redirects=True)
-        response.raise_for_status()
-        result = response.json()
-        if result.get("format_version") != 1 or not isinstance(result.get("plugins"), list):
-            raise AutoSTACGISError("Unsupported plugin manifest")
-        ids = [row["id"] for row in result["plugins"]]
-        if len(ids) != len(set(ids)):
-            raise AutoSTACGISError("Plugin manifest contains duplicate names")
-        return result
+        return RemoteRegistry(self.registry_url, "plugins").catalog()
 
     def install(self, name, version=None, active=()):
         if name in active:
@@ -99,12 +96,7 @@ class PluginManager:
             if dependency not in known:
                 self.install(dependency, active=(*active, name))
         url = row["source"]["url"]
-        if not url.startswith("https://"):
-            raise AutoSTACGISError("Plugin source must use HTTPS")
-        response = httpx.get(url, timeout=60, follow_redirects=True)
-        response.raise_for_status()
-        if sha256(response.content).hexdigest() != row["source"]["sha256"]:
-            raise AutoSTACGISError("Plugin checksum does not match the published manifest")
+        response = RemoteRegistry(self.registry_url, "plugins").source(row)
         info = metadata(response.text)
         if (info["ID"], info["VERSION"], info["CAPABILITY"]) != (name, row["version"], row["capability"]):
             raise AutoSTACGISError("Plugin declarations do not match the manifest")
@@ -150,7 +142,12 @@ class PluginManager:
         try:
             module = self._load(path)
             registry.validate_module(module)
-            if (module.ID, module.VERSION, module.CAPABILITY, tuple(module.REQUIRES)) != (
+            if (
+                module.ID,
+                module.VERSION,
+                module.CAPABILITY,
+                tuple(dict.fromkeys((*module.REQUIRES, *metadata(source)["REQUIRES"]))),
+            ) != (
                 info["ID"],
                 info["VERSION"],
                 info["CAPABILITY"],
@@ -171,6 +168,7 @@ class PluginManager:
                 "id": info["ID"],
                 "version": info["VERSION"],
                 "capability": info["CAPABILITY"],
+                "description": info["DESCRIPTION"],
                 "module": module_name,
                 "path": str(path.relative_to(self.directory)),
                 "sha256": digest,

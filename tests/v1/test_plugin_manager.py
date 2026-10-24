@@ -4,7 +4,8 @@ from autostacgis import Registry
 from autostacgis.errors import AutoSTACGISError
 from autostacgis.plugin_manager import PluginManager, metadata
 
-SOURCE = """ID = "example-local"
+SOURCE = '''"""Check whether a record satisfies the example condition."""
+ID = "example-local"
 VERSION = "1.0.0"
 CAPABILITY = "checks"
 REQUIRES = []
@@ -12,7 +13,7 @@ DEPENDENCIES = []
 class Check:
     def __call__(self, *args): return True
 IMPLEMENTATION = Check
-"""
+'''
 
 
 def test_file_install_uses_namespace_and_versioned_store(tmp_path, monkeypatch):
@@ -67,6 +68,7 @@ def test_manifest_install_verifies_git_source_checksum(tmp_path, monkeypatch):
         "plugins": [
             {
                 "id": "example-local",
+                "description": "Check whether a record satisfies the example condition.",
                 "version": "1.0.0",
                 "capability": "checks",
                 "requires": [],

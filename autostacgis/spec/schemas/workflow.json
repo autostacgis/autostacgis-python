@@ -1,0 +1,506 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/workflow.json",
+  "title": "Capability-grouped workflow",
+  "type": "object",
+  "properties": {
+    "trigger": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      },
+      "maxProperties": 1
+    },
+    "data_in": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "metadata_in": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "sequence": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "data_transfer": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "encode": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "process": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "data_out": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "metadata_out": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "goal": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object"
+          },
+          {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object"
+            }
+          }
+        ]
+      },
+      "minProperties": 1
+    },
+    "solver": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      },
+      "minProperties": 1,
+      "maxProperties": 1
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "metadata_structure": {
+      "type": "object",
+      "description": "Declared STAC metadata: referenced Item JSON Schemas plus inline Item schema. Strict mode rejects undeclared fields.",
+      "properties": {
+        "schemas": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "uniqueItems": true
+        },
+        "inline": {
+          "type": "object"
+        },
+        "strict": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "query": {
+          "type": "object"
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "sequence": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "plugin": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "settings": {
+                    "type": "object"
+                  },
+                  "scope": {
+                    "enum": [
+                      "inventory",
+                      "available"
+                    ]
+                  }
+                },
+                "required": [
+                  "plugin"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "plugin": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "settings": {
+                      "type": "object"
+                    },
+                    "scope": {
+                      "enum": [
+                        "inventory",
+                        "available"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "plugin"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "work_directory": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data_transfer": {
+          "type": "object",
+          "properties": {
+            "plugin": {
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "plugin"
+          ],
+          "additionalProperties": false
+        },
+        "checkpoint": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "plugin": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "settings": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "plugin"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "discovery": {
+          "type": "boolean"
+        },
+        "steps": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "plugin": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "settings": {
+                    "type": "object"
+                  },
+                  "sequence": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "plugin": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "settings": {
+                              "type": "object"
+                            },
+                            "scope": {
+                              "enum": [
+                                "inventory",
+                                "available"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "plugin"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "array",
+                          "minItems": 1,
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "plugin": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "settings": {
+                                "type": "object"
+                              },
+                              "scope": {
+                                "enum": [
+                                  "inventory",
+                                  "available"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "plugin"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "transfer": {
+                    "enum": [
+                      "memory",
+                      "file",
+                      "optimized"
+                    ]
+                  },
+                  "checkpoint": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "plugin": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "settings": {
+                            "type": "object"
+                          }
+                        },
+                        "required": [
+                          "plugin"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "inputs": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string",
+                      "pattern": "^result:"
+                    }
+                  },
+                  "outputs": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^path:.+"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "publish": {
+                              "type": "object",
+                              "properties": {
+                                "encode": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "data_out": {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "metadata_out": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "plugin": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "settings": {
+                                          "type": "object"
+                                        }
+                                      },
+                                      "required": [
+                                        "plugin"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "plugin": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "settings": {
+                                            "type": "object"
+                                          }
+                                        },
+                                        "required": [
+                                          "plugin"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [],
+                              "additionalProperties": false
+                            },
+                            "transfer": {
+                              "enum": [
+                                "memory",
+                                "file",
+                                "optimized"
+                              ]
+                            }
+                          },
+                          "required": [],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "plugin"
+                ],
+                "additionalProperties": false,
+                "patternProperties": {
+                  "^param:.+": {}
+                }
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "auto": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "auto"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "solver",
+    "goal"
+  ],
+  "additionalProperties": false
+}

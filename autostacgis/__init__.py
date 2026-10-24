@@ -7,5 +7,5 @@ from .contracts import module
 from .model import Record
 from .registry import Registry
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __all__ = ["Application", "Artifact", "Checkpoint", "CheckpointReference", "Record", "Registry", "module"]

@@ -33,6 +33,8 @@ class Registry:
         self.requirements = {}
         self.defaults = {}
         self.versions = {}
+        self.descriptions = {}
+        self.config_defaults = {}
         if builtins:
             from autostacgis_plugins import install
 
@@ -77,7 +79,7 @@ class Registry:
                     self.register_module(provider)
                 elif self.plugins[registered] != {
                     provider.CAPABILITY: provider.IMPLEMENTATION
-                } or self.requirements[registered] != tuple(provider.REQUIRES):
+                } or self.requirements[registered] != self.module_requirements(provider):
                     raise AutoSTACGISError(f"Conflicting implementation plugin: {registered}")
             else:
                 raise AutoSTACGISError(f"Invalid plugin module: {name}")
@@ -156,17 +158,31 @@ class Registry:
             r"\d+\.\d+\.\d+(?:[-+][\w.-]+)?", module.VERSION
         ):
             raise AutoSTACGISError("Plugin VERSION must be a semantic version string")
+        if not isinstance(getattr(module, "__doc__", None), str) or not module.__doc__.strip():
+            raise AutoSTACGISError("Plugin modules must have a descriptive module docstring")
 
     def register_module(self, module):
         self.validate_module(module)
+        fragment = deepcopy(getattr(module, "DEFAULT_CONFIG", {}))
+        dependencies = self.module_requirements(module)
         self.register(
             module.ID,
             module.CAPABILITY,
             module.IMPLEMENTATION,
-            requires=module.REQUIRES,
+            requires=dependencies,
             defaults=getattr(module, "DEFAULTS", {}),
         )
         self.versions[module.ID] = module.VERSION
+        self.descriptions[module.ID] = module.__doc__.strip()
+        self.config_defaults[module.ID] = fragment
+
+    @staticmethod
+    def module_requirements(module):
+        from .workflow_config import referenced_plugins
+
+        return tuple(
+            dict.fromkeys((*module.REQUIRES, *referenced_plugins(getattr(module, "DEFAULT_CONFIG", {}))))
+        )
 
     def service_plugins(self):
         return {

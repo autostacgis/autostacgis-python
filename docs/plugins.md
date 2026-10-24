@@ -79,3 +79,9 @@ adapters such as EODAG can share a gateway and selected products. Configure acqu
 settings on the `*-download` registration, separately from discovery settings.
 Encoder plugins depend on separate `*-metadata` writers, which update embedded STAC
 after publication. Product goals use declarative `output` and `for_each` constraints.
+
+## Descriptions, defaults, and editors
+
+Every plugin module must begin with a useful module docstring. It is the shared plugin description used by the CLI and GUIs. Declare a semantic `VERSION` and bump it when changing the file. `DEFAULTS` supplies the plugin's own parameters. An optional literal `DEFAULT_CONFIG = {"sequence": {"gather-all": {}}}` selects supporting plugins, supplies their default parameters, and adds those names to this plugin's required dependencies. Explicit workflow parameters win. Declare actual check/sequence use in the processing contract.
+
+Provide `IMPLEMENTATION.settings_schema` (or the contract's `settings_schema`) with JSON types, parameter descriptions, optional defaults, and `additionalProperties: false` when the parameter set is closed. Both editors offer missing declared parameters with their defaults. Simple typed function parameters can also be reflected; unsupported annotations are left editable as JSON. Read [workflow configuration](workflows.md) for the grouped file format and registry CLI.

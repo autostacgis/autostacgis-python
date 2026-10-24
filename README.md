@@ -28,9 +28,13 @@ pip install -e external/eodag -e external/eoreader
 
 Use the conda environment in `environment.yml` for GDAL-backed operations. Optional extras in `autostacgis-plugins` include `atmosphere`, `spectralmatch`, `registration`, `cloud`, `pointcloud`, and `distributed`. Py6S also requires the 6S executable; cloud inference requires the model assets supplied by OmniCloudMask.
 
-The standard way to run a workflow is a single self-contained `config.yaml` (or
-`config.json`) containing `catalog` and `request` sections. Keep the settings you
-need to change in that file; omitted settings retain their defaults.
+Workflows use one JSON or YAML configuration file with plugin types as top-level sections:
+
+```json
+{"solver":{"backward_chain":{}},"goal":{"metadata-value":{"path":"properties.ready","value":true}}}
+```
+
+Add processing and metadata source plugins for your data. Dependencies and runtime services are selected automatically. See [workflow configuration and registries](docs/workflows.md) for triggers, defaults, CLI installation and shared workflow publication. The existing scientific examples below also exercise the compatible legacy catalog/request format.
 
 ```python
 from autostacgis import Application
@@ -72,35 +76,24 @@ Runtime settings control shared workers, native thread budgets, tile sizes, and 
 
 Run `pytest`, `ruff check autostacgis tests tools examples`, and `python tools/check_spec.py` to verify the implementation. `tools/export_examples.py` regenerates the small, self-contained workflow examples.
 
-Select a workflow's plugins and their dependencies:
+Select plugins by type and override only the parameters you need:
 
 ```yaml
-version: 1.0.0
-plugins:
-  - use: stac-resolver
-    settings: {search_glob: "data/**/*.tif"}
-  - use: pansharpen
-  - use: executor
-  - use: storage
-  - use: events
-  - use: geotiff
-  - use: stac-json
+solver:
+  backward_chain: {timeout: 120}
+goal:
+  metadata-value: {path: 'assets.$asset.data_state:statistics_calculated', value: true}
+metadata_in:
+  stac-source: {items: [scene.json]}
+process:
+  statistics: {}
+trigger:
+  now: {}
 ```
 
 See [the WorldView configuration](examples/worldview/config.yaml) for the complete processing selection. Py6S requires an elevation-summary input: `sample_dem` computes the mean of valid DEM pixels inside each scene footprint, in meters, and Py6S converts it to kilometers. No sea-level fallback is applied. Reference registration imports Coregix; footprint cleanup imports the same SpectralMatch implementation used by VHRHarmonize. GeoTIFF/COG writers embed the complete Item in the `STAC` metadata tag and map band names, units, scales, offsets, and acquisition time to native headers.
 
-Run configurations combine `catalog` (available plugins) and `request` (goals and
-overrides) in one file. The solver seeks outputs satisfying `request.goal`, while
-respecting plugin contracts and explicit step constraints. The request may declare
-named `steps` with `plugin`,
-`settings` or `param:name` overrides and explicit `{auto: true}` solver gaps.
-With no steps, synthesis remains automatic; without gaps, steps must satisfy all
-prerequisites and final goals. Native links use `result:step:port`; parameters can
-select Item metadata with `result:step:port#/JSON/pointer`. Explicit output
-locations use `outputs: {result: 'path:./saved.tif'}` and become asset hrefs.
-See [practical workflows](examples/README.md), the comprehensive
-[configuration references](https://github.com/autostacgis/autostacgis/tree/main/examples), and the
-[configuration specification](https://github.com/autostacgis/autostacgis/blob/main/specification.md#run-configuration).
+The optional `execution.steps` section constrains explicit processing steps and solver gaps. Plugin defaults remain in their capability sections. Older catalog/request files and Python request calls remain supported; new GUI exports use the grouped format. See [workflow configuration](docs/workflows.md).
 
 
 Standard plugins are distributed separately in
@@ -113,7 +106,7 @@ Each plugin declares one `CAPABILITY` and one `IMPLEMENTATION`. See the
 [before-and-after inventory](https://github.com/autostacgis/autostacgis-plugins/blob/main/docs/plugin-migration.md)
 for split registration names and import changes.
 
-Goal presets now live in configuration. Select one solver with `solver: {plugin: backward_chain, settings: {timeout: 120}}`. Generic goal adapters must declare that solver as a named dependency and expose parameter schemas; see [solver contracts](https://github.com/autostacgis/autostacgis-plugins/blob/main/docs/solvers.md).
+Goal presets now live in configuration. Select one solver with `solver: {backward_chain: {timeout: 120}}`. Generic goal adapters must declare that solver as a named dependency and expose parameter schemas; see [solver contracts](https://github.com/autostacgis/autostacgis-plugins/blob/main/docs/solvers.md).
 
 Timed and file-based automation use the native [APScheduler and watchdog triggers](docs/triggers.md), exposed by separate single-capability plugins.
 

@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import click
 
@@ -25,15 +26,75 @@ def validate_command(catalog, request):
     click.echo("Valid")
 
 
-@main.command("plugins")
-@click.argument("catalog", type=click.Path(exists=True))
-def plugins_command(catalog):
-    app = Application.from_file(catalog)
-    emit(
-        [
-            {"id": plugin["id"], "capabilities": list(plugin["capabilities"])}
-            for plugin in app.plugins.values()
-        ]
+@main.group("plugins", invoke_without_command=True)
+@click.pass_context
+def plugins_command(ctx):
+    """List installed plugins, browse published versions, or install Python files."""
+    if ctx.invoked_subcommand is None:
+        from .plugin_metadata import inventory
+        from .registry import Registry
+
+        emit(inventory(Registry()))
+
+
+@plugins_command.command("list")
+def list_plugins():
+    from .plugin_metadata import inventory
+    from .registry import Registry
+
+    emit(inventory(Registry()))
+
+
+@plugins_command.command("available")
+@click.option("--registry", default=None)
+def available_plugins(registry):
+    from .plugin_manager import REGISTRY_URL, PluginManager
+
+    emit(PluginManager(registry_url=registry or REGISTRY_URL).catalog())
+
+
+@plugins_command.command("install")
+@click.argument("name")
+@click.option("--version")
+@click.option("--registry", default=None)
+def install_plugin(name, version, registry):
+    from .plugin_manager import REGISTRY_URL, PluginManager
+
+    emit(PluginManager(registry_url=registry or REGISTRY_URL).install(name, version))
+
+
+@plugins_command.command("install-file")
+@click.argument("filename", type=click.Path(exists=True, path_type=Path))
+def install_file(filename):
+    from .plugin_manager import PluginManager
+
+    emit(PluginManager().install_file(filename.name, filename.read_text()))
+
+
+@main.group("workflows")
+def workflows_command():
+    """Browse published workflow JSON and download it to a folder."""
+
+
+@workflows_command.command("available")
+@click.option("--registry", default=None)
+def available_workflows(registry):
+    from .workflow_manager import REGISTRY_URL, WorkflowManager
+
+    emit(WorkflowManager(registry or REGISTRY_URL).catalog())
+
+
+@workflows_command.command("download")
+@click.argument("name")
+@click.argument("directory", type=click.Path(file_okay=False))
+@click.option("--version")
+@click.option("--registry", default=None)
+@click.option("--overwrite", is_flag=True)
+def download_workflow(name, directory, version, registry, overwrite):
+    from .workflow_manager import REGISTRY_URL, WorkflowManager
+
+    click.echo(
+        WorkflowManager(registry or REGISTRY_URL).download(name, directory, version, overwrite=overwrite)
     )
 
 
@@ -51,7 +112,9 @@ def operation(name):
         elif name == "available":
             emit(app.available(req))
         else:
-            result = app.run(req)
+            result = (
+                app.trigger(app.trigger_name, req) if app.trigger_name not in (None, "now") else app.run(req)
+            )
             if hasattr(result, "close"):
                 with result:
                     emit([r.item for r in result])

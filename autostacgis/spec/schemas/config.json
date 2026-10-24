@@ -1,39 +1,46 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/config.json",
-  "type": "object",
-  "properties": {
-    "catalog": {
-      "$ref": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/catalog.json"
+  "oneOf": [
+    {
+      "$ref": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/workflow.json"
     },
-    "request": {
-      "$ref": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/request.json"
-    },
-    "metadata_structure": {
+    {
       "type": "object",
-      "description": "Declared STAC metadata: referenced Item JSON Schemas plus inline Item schema. Strict mode rejects undeclared fields.",
       "properties": {
-        "schemas": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "uri"
+        "catalog": {
+          "$ref": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/catalog.json"
+        },
+        "request": {
+          "$ref": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/request.json"
+        },
+        "metadata_structure": {
+          "type": "object",
+          "description": "Declared STAC metadata: referenced Item JSON Schemas plus inline Item schema. Strict mode rejects undeclared fields.",
+          "properties": {
+            "schemas": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uri"
+              },
+              "uniqueItems": true
+            },
+            "inline": {
+              "type": "object"
+            },
+            "strict": {
+              "type": "boolean",
+              "default": true
+            }
           },
-          "uniqueItems": true
-        },
-        "inline": {
-          "type": "object"
-        },
-        "strict": {
-          "type": "boolean",
-          "default": true
+          "additionalProperties": false
         }
       },
+      "required": [
+        "request"
+      ],
       "additionalProperties": false
     }
-  },
-  "required": [
-    "request"
-  ],
-  "additionalProperties": false
+  ]
 }

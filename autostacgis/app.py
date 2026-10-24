@@ -16,6 +16,14 @@ from .stac import Stac
 
 class Application:
     def __init__(self, catalog=None, *, base_dir=".", registry=None, events=None):
+        from .workflow_config import is_workflow, normalize
+
+        self.workflow = deepcopy(catalog) if is_workflow(catalog) else None
+        self.trigger_name = None
+        if self.workflow is not None:
+            registry = registry or Registry(builtins=False)
+            catalog = normalize(self.workflow, registry)
+            self.trigger_name = next(iter(self.workflow.get("trigger", {})), "now")
         if catalog is None:
             from .builtins.catalog import catalog as builtin_catalog
 
@@ -100,6 +108,13 @@ class Application:
 
         for call in self.catalog["defaults"].values():
             include(call["plugin"])
+        if self.workflow is not None:
+            for name in ("executor", "storage", "events"):
+                include(name)
+                definition = next(p for p in self.catalog["plugins"] if p["id"] == name)
+                self.catalog.setdefault("runtime", {}).setdefault(
+                    name, deepcopy(definition["capabilities"]["services"])
+                )
         solvers = [p["id"] for p in self.catalog["plugins"] if "solver" in p["capabilities"]]
         if self.catalog.get("solver"):
             include(self.catalog["solver"]["plugin"])
@@ -141,6 +156,8 @@ class Application:
         if len(solvers) != 1:
             raise AutoSTACGISError("Exactly one solver plugin must be selected; found: " + ", ".join(solvers))
         self.solver_name = next(iter(solvers))
+        if self.workflow is not None:
+            self.trigger_name = next(iter(self.capabilities["trigger"]), "now")
         self.solver_implementation = self.registry.resolve(
             "solver", solvers[self.solver_name]["implementation"]
         )
@@ -167,6 +184,8 @@ class Application:
         self.work = self.path("work")
 
     def snapshot(self):
+        if self.workflow is not None:
+            return deepcopy(self.workflow)
         result = {
             "catalog": deepcopy(self.catalog),
             "request": deepcopy(self.default_request or {"goal": {"output": {}}}),
@@ -455,7 +474,10 @@ class Application:
                 records[index].key = key
                 inspected.add(key)
 
-    def trigger(self, name, request=None):
+    def trigger(self, name=None, request=None):
+        name = name or self.trigger_name or "now"
+        if name == "now" and name not in self.capabilities["trigger"]:
+            return self.run(request)
         definition, settings = self.resolve_call("trigger", {"plugin": name})
         return self.registry.resolve("trigger", definition["implementation"])(
             self.scope(name), settings, request
