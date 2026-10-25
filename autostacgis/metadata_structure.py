@@ -20,6 +20,12 @@ class MetadataStructure:
 
     def __init__(self, configuration, stac):
         self.configuration = deepcopy(configuration or {})
+        if "schemas" in self.configuration:
+            from .stac import current_schema
+
+            self.configuration["schemas"] = list(
+                dict.fromkeys(current_schema(uri) for uri in self.configuration["schemas"])
+            )
         self.stac = stac
         self.enabled = configuration is not None
         validators.validator_for(self.configuration.get("inline", {})).check_schema(

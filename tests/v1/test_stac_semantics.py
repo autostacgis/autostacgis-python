@@ -123,6 +123,28 @@ def test_local_header_uses_standard_fields_and_detects_conflicts(tmp_path):
         inspect_raster(record, {}, app)
 
 
+def test_provider_adapter_schema_identifiers_are_normalized_without_fetching_old_versions(monkeypatch):
+    from autostacgis.stac import LEGACY_STATE, STATE
+
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: pytest.fail("Unexpected schema download"))
+    item = scene().item
+    Stac.extensions(item)
+    item["stac_extensions"] = [LEGACY_STATE if uri == STATE else uri for uri in item["stac_extensions"]]
+    before = deepcopy(item)
+    stac = Stac(
+        metadata_structure={
+            "schemas": item["stac_extensions"],
+            "inline": {"properties": {"properties": {"properties": {"platform": {"type": "string"}}}}},
+        }
+    )
+    normalized = stac.validate(item)
+    assert STATE in normalized["stac_extensions"]
+    assert LEGACY_STATE not in normalized["stac_extensions"]
+    assert item == before
+    Stac.extensions(item)
+    assert STATE in item["stac_extensions"] and LEGACY_STATE not in item["stac_extensions"]
+
+
 def test_eodag_rules_use_same_standard_fields_and_retain_provider_metadata():
     pytest.importorskip("eodag.autostacgis")
     from eodag.autostacgis import describe_product
