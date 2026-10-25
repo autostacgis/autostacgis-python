@@ -75,7 +75,7 @@ def test_schema_rejects_invalid_shapes():
     with pytest.raises(AutoSTACGISError):
         validate({"sources": []}, "catalog")
     with pytest.raises(AutoSTACGISError):
-        validate({"version": "1.0.0", "plugins": {"processors": []}}, "catalog")
+        validate({"version": "0.0.1", "plugins": {"processors": []}}, "catalog")
 
 
 def test_path_escaped_backslash_before_separator():

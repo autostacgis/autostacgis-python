@@ -15,7 +15,7 @@ def module(
     input_requirements=(),
     cost=1,
     settings=None,
-    version="1.0.0",
+    version="0.0.1",
     cost_dependencies=(),
     **options,
 ):

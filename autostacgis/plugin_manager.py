@@ -110,9 +110,10 @@ class PluginManager:
         info = metadata(source)
         previous = self.installed().get(info["ID"])
         if previous and previous["version"] == info["VERSION"]:
-            if previous["sha256"] != sha256(source.encode()).hexdigest():
+            if previous["sha256"] == sha256(source.encode()).hexdigest():
+                return previous
+            if info["VERSION"] != "0.0.1":
                 raise AutoSTACGISError("Bump VERSION when changing an installed plugin")
-            return previous
         from autostacgis_plugins import builtin_names
 
         for name, module_name in builtin_names().items():

@@ -48,10 +48,10 @@ The Python library owns online discovery and checksum verification for both regi
 ```sh
 autostacgis plugins list
 autostacgis plugins available
-autostacgis plugins install statistics --version 1.1.0
+autostacgis plugins install statistics --version 0.0.1
 autostacgis plugins install-file ./my_check.py
 autostacgis workflows available
-autostacgis workflows download metadata-value ./workflows
+autostacgis workflows download mosaic ./workflows
 ```
 
 `plugins list` includes every installed standard and downloaded plugin, its version, description, dependencies, defaults, and parameter schema. Sources are Python files installed into the `autostacgis_plugins` namespace. Python package dependencies use `DEPENDENCIES`; plugin dependencies use `REQUIRES`. Every plugin file needs a meaningful module docstring. The library exposes it through `plugin_metadata.inventory()`. Explicit settings schemas take precedence over conservative reflection of simple annotated function parameters; complex annotations are left for text editing. Parameter descriptions come from the explicit schema or supported function docstrings.
@@ -61,3 +61,9 @@ Published sources use HTTPS, commit-pinned URLs and SHA-256 checksums. Downloadi
 Publish through a pull request to [autostacgis-plugins](https://github.com/autostacgis/autostacgis-plugins/blob/main/CONTRIBUTING.md) or [autostacgis-workflows](https://github.com/autostacgis/autostacgis-workflows/blob/main/CONTRIBUTING.md). Each entry has a unique ID, semantic version and description; changes require a version bump. GitHub Actions builds and deploys the registries.
 
 In either GUI, activate a published or saved workflow to load its JSON into the editor. Published documents are copied before saving changes. Saved documents can be updated, copied under a new name, renamed, or deleted. Saved workflows live in the connected backend's database, including when that backend runs on your computer. This saved library is shared by web and QGIS. CLI integration deliberately stops at downloading JSON to a folder.
+
+## Prerelease versions and result saving
+
+All first-party versions remain `0.0.1` during prerelease development. Registry URLs pin commits and checksums, and installed `0.0.1` plugin revisions use content-addressed storage. Reinstalling a changed prerelease plugin activates its new checksum without requiring a version bump.
+
+The published `mosaic` workflow aligns selected images, extracts and cleans their footprints, builds Voronoi seamlines, masks individual scenes and assembles a mosaic. Configure its CRS and resolution for the intended output. Its goal describes the mosaic state; saving is off by default. Set `process.<plugin>.outputs.<port>.save` independently for any final or intermediate result. See [data flow](data-flow.md#saving-named-results) for paths, JSONata naming and output defaults.

@@ -38,6 +38,6 @@ Comprehensive configuration-field references live in the
 They are reference documents, rather than copies of these practical workflows.
 
 EOReader searches product folders itself; ordinary local examples use `stac-resolver`
-to discover TIFFs and their sidecars. Output goals attach `publish` policies for
+to discover TIFFs and their sidecars. Producing plugin outputs declare saving policies for
 format encoding, filesystem storage, and STAC metadata. See [data flow](../docs/data-flow.md)
 for optional transfer budgets, sequence routing, and checkpoints.

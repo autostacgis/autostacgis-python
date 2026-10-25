@@ -129,6 +129,8 @@ def read(path):
 
 def merge(defaults, overrides):
     """Recursively override objects; arrays and scalar values replace completely."""
+    if "plugin" in overrides and "plugin" in defaults and overrides["plugin"] != defaults["plugin"]:
+        return deepcopy(overrides)
     result = deepcopy(defaults)
     for key, value in overrides.items():
         result[key] = (

@@ -1,10 +1,24 @@
 catalog:
-  version: 1.0.0
+  version: 0.0.1
   plugins:
   - use: stac-resolver
     settings:
       search_glob: data/*.tif
   - use: mosaic
+    execution:
+      outputs:
+        result:
+          save: true
+          encode:
+            plugin: geotiff
+          data_out:
+            plugin: filesystem
+            settings:
+              path: ./output/mosaic.tif
+          metadata_out:
+            plugin: stac-json
+            settings:
+              path: ./output/mosaic.stac.json
   - use: mask_by_polygons
   - use: markov_seamlines
   - use: clean_footprints
@@ -55,17 +69,6 @@ request:
           assets.$asset.unit: '1'
     - output:
         name: result
-        publish:
-          encode:
-            plugin: geotiff
-          data_out:
-            plugin: filesystem
-            settings:
-              path: ./output/mosaic.tif
-          metadata_out:
-            plugin: stac-json
-            settings:
-              path: ./output/mosaic.stac.json
   steps:
     align_inputs:
       plugin: align_grid

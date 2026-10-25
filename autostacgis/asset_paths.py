@@ -38,5 +38,12 @@ def directory_root(item):
 
 
 def set_directory_root(item):
-    item.setdefault("properties", {})["data_state:directory_root"] = directory_root(item)
+    properties = item.setdefault("properties", {})
+    root = directory_root(item)
+    properties["data_state:directory_root"] = root
+    # Unlike directory_root, the preferred output directory survives transient hrefs.
+    from .io import is_local
+
+    if root and is_local(root):
+        properties.setdefault("data_state:output_directory", root)
     return item

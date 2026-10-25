@@ -34,7 +34,7 @@ def test_quantity_alone_does_not_satisfy_physical_product_goal(tmp_path, unit):
     with pytest.raises(NoPlan):
         Application(subset(), base_dir=tmp_path).plan(
             {
-                "version": "1.0.0",
+                "version": "0.0.1",
                 "goal": {
                     "for_each": {
                         "kind": "raster",
@@ -65,7 +65,7 @@ def test_pansharpen_decodes_scale_offset_and_updates_band_state(tmp_path):
     before = deepcopy(image.item)
     with Application(subset("pansharpen"), base_dir=tmp_path).run(
         {
-            "version": "1.0.0",
+            "version": "0.0.1",
             "goal": {
                 "for_each": {
                     "kind": "raster",

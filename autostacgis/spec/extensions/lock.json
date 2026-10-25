@@ -44,10 +44,10 @@
     "sha256": "9637929dbdb547c3a8e39fe54643d21290ab0fcd8eca4b0b47b07a75f3a65236"
   },
   "data-state": {
-    "url": "https://autostacgis.github.io/stac-data-state/v1.0.0/schema.json",
+    "url": "https://autostacgis.github.io/stac-data-state/v0.0.1/schema.json",
     "repository": "https://github.com/autostacgis/stac-data-state",
     "commit": "b0ac764697b347692cbd975d5a3f3407cefdf1cf",
     "path": "json-schema/schema.json",
-    "sha256": "d555f7870c10be0fed9621b068f433b9324ffa6665cc4ced535346a3c707c911"
+    "sha256": "c257d32ecae775070835b1dcbd1b32ff9382026473e0479ccb84d322be8273d9"
   }
 }

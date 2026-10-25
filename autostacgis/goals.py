@@ -97,7 +97,6 @@ def compile_goal(goal, records, context, active=()):
                     "kind": spec.get("kind", r.kind),
                     "require": spec.get("require", {}),
                     "member": r.key,
-                    **({"publish": spec["publish"]} if "publish" in spec else {}),
                     **({"coverage": spec["coverage"]} if "coverage" in spec else {}),
                 }
                 for r in chosen

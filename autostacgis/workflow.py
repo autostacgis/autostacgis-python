@@ -99,8 +99,12 @@ def stages(planner):
             contract["argument_requirements"][port]["sequence_override"] = True
         for port, output in declaration.get("outputs", {}).items():
             if isinstance(output, dict):
-                contract["outputs"][port].update(output)
-                p.app.validate_publication(contract["outputs"][port]["data_types"], output.get("publish"))
+                from .results import result_options
+
+                contract["outputs"] = result_options(contract, {port: output})
+                policy = contract["outputs"][port]
+                if policy.get("save", False):
+                    p.app.validate_publication(policy["data_types"], policy)
         p.modules = automatic_modules if automatic else {}
         p.leaves = dict(frontier)
         p.memo.clear()
@@ -299,10 +303,10 @@ def persist(record, destination, initial, app):
     ]
     if len(encoders) != 1:
         raise AutoSTACGISError(
-            f"Explicit path requires exactly one encoder for {suffix}; use outputs.publish to select one"
+            f"Explicit path requires exactly one encoder for {suffix}; configure the named output's encode and data_out"
         )
     encoder = encoders[0]
-    return publish(
+    saved = publish(
         app,
         record,
         {
@@ -310,6 +314,8 @@ def persist(record, destination, initial, app):
             "data_out": {"plugin": "filesystem", "settings": {"path": str(path), "overwrite": True}},
         },
     )
+    saved.runtime["saved"] = True
+    return saved
 
 
 def validate_steps(app, request, modules):

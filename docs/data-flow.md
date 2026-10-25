@@ -78,43 +78,44 @@ buffering; file requests file backing. For bytes, receivers must accept `path` o
 `byte-stream` to allow spilling. This budget does not constrain memory inside
 numerical libraries. Managed scratch is valid while the `RunResult` remains open.
 
-## Saving outputs
+## Saving named results
 
-An output goal or a process output can declare `publish`. Named steps can override
-it under `outputs.<port>.publish`:
+Goals specify the data to produce. Saving is configured separately on each producing plugin's named output. Standard plugins declare defaults, including `save: false`, an encoder, filename suffix tokens, and a destination path. The same fields appear in both GUI JSON editors and in the Python plugin inventory.
 
-```yaml
-goal:
-  plugin: output
-  settings:
-    require: {assets.$asset.data_state:mosaic: true}
-    publish:
-      encode: {plugin: geotiff}
-      data_out:
-        plugin: filesystem
-        settings: {path: ./output/mosaic.tif}
-      metadata_out: {plugin: stac-json}
+```json
+{
+  "solver": {"backward_chain": {}},
+  "goal": {"metadata-value": {"path": "assets.$asset.data_state:statistics_calculated", "value": true}},
+  "process": {
+    "statistics": {
+      "outputs": {
+        "result": {
+          "save": true,
+          "data_out": {"plugin": "filesystem", "settings": {"path": "exports/scene.tif"}}
+        }
+      }
+    }
+  }
+}
 ```
 
-GeoTIFF, COG, Zarr, and Parquet provide `encode`. Encoders return artifacts; they do
-not choose the final storage destination. `data_out` destinations declare
-`input_types`/`output_types`: filesystem and S3 accept bytes, streams, and paths.
-A process already producing bytes can save them directly without an encoder.
-Encoders can supply `restore(saved, record, settings)` to reopen their encoded
-artifacts; checkpoints use that interface and the encoder's `extension` rather than
-assuming a particular file format.
-Filesystem writes atomically and refuses existing outputs unless `overwrite: true`.
-With no explicit path it generates a unique location below `output/data`.
+Use just `{"save": true}` to accept that output's plugin defaults. Omit `save`, or set it to false, to keep the result in the managed runtime. The standard defaults do not write durable output files. Algorithms may still create temporary working files and transfer buffers according to their storage policies.
 
-The saved location becomes the selected asset href and updates the directory-root
-metadata. Native format plugins can update embedded STAC through their own
-`metadata_out` capability after the location is known. Metadata plugins return an
-updated Item or null. `stac-item` applies `settings.set` directly in memory;
-`stac-json` can save the whole Item or a dotted `value_path`, select `path` or
-`directory`, and retain the location at an optional dotted `href_field`. It writes
-through a declared `data_out` destination. The returned Item records that
-destination's actual reference. For remote destinations this reference is retained
-in the returned Item; local JSON can also retain its own reference in the file. `stac-api` sends Items directly to an API.
+Any named result can be saved, including intermediate results and multiple ports of one function. An optional `encode` plugin converts native rasters or Arrow batches into a typed artifact. The `data_transfer` provider then supplies the bytes, byte stream or path accepted by the selected `data_out` plugin. Already encoded outputs can set `encode: null` and go directly to the destination. `metadata_out` can independently update or save the result's STAC metadata. A named stage can override the same fields at `execution.steps.<step>.outputs.<port>`.
+
+Each standard processing plugin appends its configured `filename_suffixes` to `assets.<key>.data_state:filename_suffixes`. Tokens belong to the individual asset; repeated operations keep repeated entries. Override this output option with another list, or an empty list to append nothing. Scientific state fields remain distinct from this naming history.
+
+Per-scene plugins default to the stable `properties.data_state:output_directory`, initialized from the input Item's shared directory root. Their default JSONata path joins the asset tokens with underscores and adds the appropriate extension. When no local Item root is known, per-scene plugins declare an `output/<source-id>` folder. Collective outputs default to the workflow's `output` directory. Set `outputs.<port>.output_directory` to override the preferred folder literally or with JSONata. These choices are declared in the plugins, not in the executor. Change the metadata directory or override `data_out.settings.path` to select another location.
+
+Destination and encoder settings may use `{"jsonata": "..."}` expressions. Expressions receive `item`, `asset`, `asset_key`, `kind`, `source_id`, and `source_asset`. For example:
+
+```json
+{"jsonata": "item.properties.`data_state:output_directory` & '/' & source_id & '_' & $join(asset.`data_state:filename_suffixes`, '_') & '.tif'"}
+```
+
+All saving and naming defaults are overridable in configuration. Changing a referenced plugin replaces that call's defaults instead of carrying settings from the previous plugin into the new one. Encoders and destinations are loaded only when needed by an enabled save policy. Filesystem saves remain atomic and refuse existing files unless `overwrite: true` is configured.
+
+The PostgreSQL service returns unsaved result metadata without automatically materializing payloads or indexing transient asset URLs. Explicitly saved files are served in place and durable result Items are indexed in pgSTAC. Metadata writers can publish elsewhere through their own configured destination.
 
 ## Checkpoints
 

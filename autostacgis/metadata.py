@@ -162,8 +162,44 @@ def output_metadata(inputs, output, index=0, settings=None):
             source = selected[name].runtime.get("selected_asset", "data")
             assets = inherited["assets"]
             inherited["assets"] = {destination: assets[source]} if source in assets else assets
+        if "properties" in inherited and "data_state:output_directory" not in inherited["properties"]:
+            from .asset_paths import directory_root
+            from .io import is_local
+
+            root = directory_root(selected[name].item)
+            if root and is_local(root):
+                inherited["properties"]["data_state:output_directory"] = root
         merge(result, inherited)
-    return transform({"base": result}, {**output, "inherit_metadata": ["base"]}, settings)
+    result = transform({"base": result}, {**output, "inherit_metadata": ["base"]}, settings)
+    if tokens := output.get("filename_suffixes"):
+        asset = result.setdefault("assets", {}).setdefault(destination, {})
+        previous = asset.get("data_state:filename_suffixes") or []
+        if not isinstance(previous, list):
+            raise AutoSTACGISError("Asset filename suffixes must be an array")
+        asset["data_state:filename_suffixes"] = [*previous, *tokens]
+    if "output_directory" in output:
+        directory = output["output_directory"]
+        if isinstance(directory, dict):
+            from .expressions import evaluate
+
+            source = selected[next(iter(selected))]
+            directory = evaluate(
+                directory["jsonata"],
+                {
+                    "item": result,
+                    "asset": result.get("assets", {}).get(destination, {}),
+                    "asset_key": destination,
+                    "kind": output.get("kind", source.kind),
+                    "source_id": source.runtime.get("source_id", source.item["id"]),
+                    "source_asset": source.runtime.get(
+                        "source_asset", source.runtime.get("selected_asset", "data")
+                    ),
+                },
+            )
+        if directory is not None and (not isinstance(directory, str) or not directory):
+            raise AutoSTACGISError("Result output_directory must resolve to a nonempty string or null")
+        result.setdefault("properties", {})["data_state:output_directory"] = directory
+    return result
 
 
 def fulfills(actual, expected):

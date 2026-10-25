@@ -66,7 +66,7 @@ def test_native_processing_and_stac_validation(tmp_path):
     app = Application(config, base_dir=tmp_path)
     with app.run(
         {
-            "version": "1.0.0",
+            "version": "0.0.1",
             "goal": {
                 "for_each": {
                     "kind": "raster",
@@ -95,7 +95,7 @@ def test_discovery_never_executes(tmp_path):
     app = Application(config, base_dir=tmp_path, registry=registry)
     plan = app.run(
         {
-            "version": "1.0.0",
+            "version": "0.0.1",
             "goal": {
                 "for_each": {
                     "kind": "raster",
@@ -122,7 +122,7 @@ def test_false_success_is_rejected(tmp_path):
     with pytest.raises(AutoSTACGISError, match="violates promised"):
         Application(config, base_dir=tmp_path, registry=registry).run(
             {
-                "version": "1.0.0",
+                "version": "0.0.1",
                 "goal": {
                     "for_each": {
                         "kind": "raster",
@@ -139,19 +139,24 @@ def test_false_success_is_rejected(tmp_path):
 
 def test_zarr_concurrent_chunks_and_stac_delivery(tmp_path):
     config = subset("pansharpen")
+    next(p for p in config["plugins"] if p["id"] == "pansharpen")["capabilities"]["process"]["execution"] = {
+        "outputs": {
+            "result": {
+                "save": True,
+                "encode": {"plugin": "zarr"},
+                "data_out": {"plugin": "filesystem", "settings": {"path": "output/data/result.zarr"}},
+                "metadata_out": {"plugin": "stac-json"},
+            }
+        }
+    }
     app = Application(config, base_dir=tmp_path)
     request = {
-        "version": "1.0.0",
+        "version": "0.0.1",
         "goal": {
             "for_each": {
                 "kind": "raster",
                 "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
                 "require": {"all": [{"path": "assets.$asset.data_state:pansharpened", "equals": True}]},
-                "publish": {
-                    "encode": {"plugin": "zarr"},
-                    "data_out": {"plugin": "filesystem"},
-                    "metadata_out": {"plugin": "stac-json"},
-                },
             }
         },
     }
@@ -184,7 +189,7 @@ def test_multiprocessing_executes_native_pipeline(tmp_path):
     app = Application(config, base_dir=tmp_path)
     with app.run(
         {
-            "version": "1.0.0",
+            "version": "0.0.1",
             "goal": {
                 "for_each": {
                     "kind": "raster",
@@ -277,7 +282,13 @@ def test_worker_byte_stream_is_transferred_before_serialization(tmp_path):
     registry = Registry()
     registry.register("worker-stream", "process", make_byte_stream)
     config = subset()
-    config["plugins"].append(registry.definition("worker-stream"))
+    definition = registry.definition("worker-stream")
+    definition["capabilities"]["process"]["execution"] = {
+        "outputs": {
+            "result": {"save": True, "data_out": {"plugin": "filesystem", "settings": {"path": "stream.bin"}}}
+        }
+    }
+    config["plugins"].append(definition)
     config["runtime"]["executor"] = {
         "implementation": "executor",
         "settings": {"backend": "multiprocessing", "workers": 2},
@@ -288,7 +299,6 @@ def test_worker_byte_stream_is_transferred_before_serialization(tmp_path):
             "output": {
                 "kind": "blob",
                 "require": {"properties.example:streamed": True},
-                "publish": {"data_out": {"plugin": "filesystem", "settings": {"path": "stream.bin"}}},
             }
         }
     }

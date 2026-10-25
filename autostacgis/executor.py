@@ -176,6 +176,9 @@ class Context:
                         source.item.get("properties", {}).get("autostacgis:source_id", source.item["id"]),
                     ),
                 )
+                record.runtime["source_asset"] = source.runtime.get(
+                    "source_asset", source.runtime.get("selected_asset", "data")
+                )
         if record.runtime.get("source_id"):
             record.item["properties"]["autostacgis:source_id"] = record.runtime["source_id"]
         record.payload = payload
@@ -206,7 +209,7 @@ class Context:
                 from .stac import Stac
 
                 Stac.extensions(record.item)
-        record.item["properties"].setdefault("processing:software", {})["autostacgis"] = "1.0.0"
+        record.item["properties"].setdefault("processing:software", {})["autostacgis"] = "0.0.1"
         return record
 
     def save_checkpoint(self, name, outputs):
@@ -502,7 +505,7 @@ class Executor:
                     if checkpoint_call:
                         from .checkpoint import identity
 
-                        cache_key = identity(function, step, inputs)
+                        cache_key = identity(function, step, inputs, outputs=contract["outputs"])
                         if cache_key is None:
                             raise AutoSTACGISError("Checkpointing requires an identifiable implementation")
                         definition, options = self.app.resolve_call("checkpoint", checkpoint_call)
@@ -556,10 +559,9 @@ class Executor:
 
                                 record = persist(record, step.paths[port], plan.initial, self.app)
                             policy = contract["outputs"][port]
-                            if policy.get("publish"):
-                                from .publication import publish
+                            from .results import save_result
 
-                                record = publish(self.app, record, policy["publish"])
+                            record = save_result(self.app, record, policy)
                             records[key] = transfers.record(
                                 record,
                                 {
@@ -574,19 +576,6 @@ class Executor:
             if not solver.validate_outputs(plan, chosen):
                 raise AutoSTACGISError("Actual outputs do not satisfy the requested goals")
             outputs = [attach_payload(r) for r in {r.key: r for r in chosen}.values()]
-            from .publication import publish
-
-            policies = plan.output_policies
-            published = {}
-            for name, keys in plan.outputs.items():
-                for key in keys:
-                    record = records[key]
-                    if policies.get(name):
-                        record = publish(self.app, attach_payload(record), policies[name])
-                    published[key] = record
-            outputs = list(published.values())
-            if not solver.validate_outputs(plan, outputs):
-                raise AutoSTACGISError("Published outputs do not satisfy the requested goals")
             events.emit("run_finished", outputs=len(outputs))
             return RunResult(outputs, plan, services, directory, solver)
         except BaseException as exc:

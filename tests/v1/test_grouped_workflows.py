@@ -16,8 +16,25 @@ from autostacgis.workflow_config import default_workflow
 from autostacgis.workflow_manager import WorkflowManager
 
 
+def test_mosaic_starter_plans_the_complete_processing_workflow():
+    app = Application(default_workflow())
+    plan = app.plan(inputs=[scene("west"), scene("east")])
+    assert [step.module for step in plan.steps] == [
+        "align_grid",
+        "align_grid",
+        "extract_footprints",
+        "clean_footprints",
+        "voronoi_seamlines",
+        "mask_by_polygons",
+        "mask_by_polygons",
+        "mosaic",
+    ]
+    assert "filesystem" not in app.plugins
+
+
 def test_minimal_workflow_plans_and_runs_without_repeating_settings(tmp_path):
     document = default_workflow()
+    document.pop("execution")
     document["goal"]["metadata-value"] = {
         "path": "assets.$asset.data_state:statistics_calculated",
         "value": True,
@@ -94,7 +111,7 @@ def test_workflow_download_checks_integrity_and_preserves_existing_files(tmp_pat
     source = json.dumps(default_workflow())
     row = {
         "id": "example",
-        "version": "1.0.0",
+        "version": "0.0.1",
         "description": "A metadata goal.",
         "source": {
             "url": "https://example.test/commit/workflow.json",

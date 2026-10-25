@@ -126,7 +126,7 @@ def test_multisensor_collection_contracts():
 def test_full_workflow_is_synthesized_from_selected_plugins(tables_first):
     app = Application(
         {
-            "version": "1.0.0",
+            "version": "0.0.1",
             "plugins": [
                 {"use": name}
                 for name in [

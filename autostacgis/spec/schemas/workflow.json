@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/workflow.json",
+  "$id": "https://autostacgis.github.io/autostacgis/v0.0.1/schemas/workflow.json",
   "title": "Capability-grouped workflow",
   "type": "object",
   "properties": {
@@ -11,13 +11,19 @@
       },
       "maxProperties": 1
     },
+    "metadata_in": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
     "data_in": {
       "type": "object",
       "additionalProperties": {
         "type": "object"
       }
     },
-    "metadata_in": {
+    "sequence": {
       "type": "object",
       "additionalProperties": {
         "type": "object"
@@ -29,7 +35,19 @@
         "type": "object"
       }
     },
-    "sequence": {
+    "process": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "encode": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "data_out": {
       "type": "object",
       "additionalProperties": {
         "type": "object"
@@ -42,24 +60,6 @@
       }
     },
     "checkpoint": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "object"
-      }
-    },
-    "encode": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "object"
-      }
-    },
-    "process": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "object"
-      }
-    },
-    "data_out": {
       "type": "object",
       "additionalProperties": {
         "type": "object"
@@ -111,7 +111,6 @@
     },
     "metadata_structure": {
       "type": "object",
-      "description": "Declared STAC metadata: referenced Item JSON Schemas plus inline Item schema. Strict mode rejects undeclared fields.",
       "properties": {
         "schemas": {
           "type": "array",
@@ -129,6 +128,7 @@
           "default": true
         }
       },
+      "required": [],
       "additionalProperties": false
     },
     "execution": {
@@ -378,83 +378,121 @@
                         {
                           "type": "object",
                           "properties": {
-                            "publish": {
+                            "save": {
+                              "type": "boolean",
+                              "default": false,
+                              "description": "Save this result through its encoder and destination. Independent of the goal."
+                            },
+                            "encode": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "data_out": {
                               "type": "object",
                               "properties": {
-                                "encode": {
-                                  "type": "object",
-                                  "properties": {
-                                    "plugin": {
-                                      "type": "string",
-                                      "minLength": 1
-                                    },
-                                    "settings": {
-                                      "type": "object"
-                                    }
-                                  },
-                                  "required": [
-                                    "plugin"
-                                  ],
-                                  "additionalProperties": false
+                                "plugin": {
+                                  "type": "string",
+                                  "minLength": 1
                                 },
-                                "data_out": {
-                                  "type": "object",
-                                  "properties": {
-                                    "plugin": {
-                                      "type": "string",
-                                      "minLength": 1
-                                    },
-                                    "settings": {
-                                      "type": "object"
-                                    }
-                                  },
-                                  "required": [
-                                    "plugin"
-                                  ],
-                                  "additionalProperties": false
-                                },
-                                "metadata_out": {
-                                  "oneOf": [
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "plugin": {
-                                          "type": "string",
-                                          "minLength": 1
-                                        },
-                                        "settings": {
-                                          "type": "object"
-                                        }
-                                      },
-                                      "required": [
-                                        "plugin"
-                                      ],
-                                      "additionalProperties": false
-                                    },
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "object",
-                                        "properties": {
-                                          "plugin": {
-                                            "type": "string",
-                                            "minLength": 1
-                                          },
-                                          "settings": {
-                                            "type": "object"
-                                          }
-                                        },
-                                        "required": [
-                                          "plugin"
-                                        ],
-                                        "additionalProperties": false
-                                      }
-                                    }
-                                  ]
+                                "settings": {
+                                  "type": "object"
                                 }
                               },
-                              "required": [],
+                              "required": [
+                                "plugin"
+                              ],
                               "additionalProperties": false
+                            },
+                            "metadata_out": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "plugin": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "settings": {
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": [
+                                    "plugin"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "plugin": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "settings": {
+                                        "type": "object"
+                                      }
+                                    },
+                                    "required": [
+                                      "plugin"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                }
+                              ]
+                            },
+                            "filename_suffixes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                              },
+                              "description": "Append these filename tokens to this output asset's history."
+                            },
+                            "output_directory": {
+                              "oneOf": [
+                                {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "jsonata": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "jsonata"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Preferred Item output directory, set literally or from JSONata. Does not enable saving."
                             },
                             "transfer": {
                               "enum": [
@@ -495,6 +533,7 @@
           }
         }
       },
+      "required": [],
       "additionalProperties": false
     }
   },

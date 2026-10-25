@@ -138,7 +138,7 @@ def test_module_entry_point_carries_dependencies(monkeypatch):
 
     provider = SimpleNamespace(
         ID="example",
-        VERSION="1.0.0",
+        VERSION="0.0.1",
         REQUIRES=("storage",),
         CAPABILITY="process",
         IMPLEMENTATION=lambda *_: None,
@@ -184,7 +184,7 @@ def test_no_sources_runs_without_implicit_discovery(tmp_path):
     assert (
         app.discover(
             {
-                "version": "1.0.0",
+                "version": "0.0.1",
                 "goal": {
                     "for_each": {
                         "kind": "raster",

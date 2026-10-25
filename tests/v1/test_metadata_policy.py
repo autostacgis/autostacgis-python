@@ -5,7 +5,7 @@ from helpers import scene
 from autostacgis.metadata import output_metadata
 
 REQUEST = {
-    "version": "1.0.0",
+    "version": "0.0.1",
     "goal": {
         "for_each": {
             "kind": "raster",

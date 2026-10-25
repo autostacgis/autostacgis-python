@@ -7,7 +7,7 @@ plugins. The former `scheduler` registration is removed. Install
 
 ```yaml
 catalog:
-  version: 1.0.0
+  version: 0.0.1
   plugins:
     - use: stac-source
       settings: {api_url: 'http://127.0.0.1:8080'}

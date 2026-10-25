@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://autostacgis.github.io/stac-data-state/v1.0.0/schema.json",
+  "$id": "https://autostacgis.github.io/stac-data-state/v0.0.1/schema.json",
   "title": "Data State Extension",
   "description": "Independent observed data properties and processing states; physical quantities and units use CF and STAC common metadata.",
   "type": "object",
@@ -12,7 +12,7 @@
     "stac_extensions": {
       "type": "array",
       "contains": {
-        "const": "https://autostacgis.github.io/stac-data-state/v1.0.0/schema.json"
+        "const": "https://autostacgis.github.io/stac-data-state/v0.0.1/schema.json"
       }
     },
     "type": {
@@ -317,6 +317,25 @@
           ],
           "minLength": 1,
           "description": "Deepest common parent directory of every asset href, including data, metadata and previews. Computed from locations rather than product naming. Relative hrefs yield a relative root; different URI schemes/authorities or incompatible absolute/relative paths yield null. Query strings and fragments do not participate."
+        },
+        "data_state:filename_suffixes": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+          },
+          "description": "Ordered filename tokens for this asset. Processing plugins append their configured tokens; duplicates are preserved. Read with JSONata and join using underscores when saving."
+        },
+        "data_state:output_directory": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "description": "Preferred destination directory for this Item, initialized from directory_root when a location is known. Preserved through processing and independent of current asset hrefs."
         }
       },
       "patternProperties": {

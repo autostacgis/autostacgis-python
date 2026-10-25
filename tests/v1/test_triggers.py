@@ -20,9 +20,9 @@ def test_trigger_registration_is_inert_and_required_parameters_are_checked_on_st
 
 def app(tmp_path):
     return SimpleNamespace(
-        catalog={"version": "1.0.0", "plugins": []},
+        catalog={"version": "0.0.1", "plugins": []},
         snapshot=lambda: {
-            "catalog": {"version": "1.0.0", "plugins": []},
+            "catalog": {"version": "0.0.1", "plugins": []},
             "request": {"goal": {"output": {}}},
         },
         base_dir=tmp_path,

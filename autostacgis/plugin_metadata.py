@@ -100,6 +100,22 @@ def inventory(registry):
     for name, capabilities in sorted(registry.plugins.items()):
         capability, implementation = next(iter(capabilities.items()))
         defaults, schema = parameters(implementation, registry.defaults[name].get(capability))
+        if capability == "process":
+            from .config import schema as contract_schema
+
+            fields = contract_schema("result")["properties"]
+            outputs = getattr(implementation, "contract", {}).get("outputs", {})
+            defaults["outputs"] = {
+                port: {key: deepcopy(value) for key, value in output.items() if key in fields}
+                for port, output in outputs.items()
+            }
+            schema.setdefault("properties", {})["outputs"] = {
+                "type": "object",
+                "description": "Optional saving and naming for each function result. Saving is independent of the goal.",
+                "properties": {port: contract_schema("result") for port in outputs},
+                "additionalProperties": False,
+                "default": deepcopy(defaults["outputs"]),
+            }
         rows.append(
             {
                 "id": name,

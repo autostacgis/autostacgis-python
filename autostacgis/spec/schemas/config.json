@@ -1,22 +1,21 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/config.json",
+  "$id": "https://autostacgis.github.io/autostacgis/v0.0.1/schemas/config.json",
   "oneOf": [
     {
-      "$ref": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/workflow.json"
+      "$ref": "https://autostacgis.github.io/autostacgis/v0.0.1/schemas/workflow.json"
     },
     {
       "type": "object",
       "properties": {
         "catalog": {
-          "$ref": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/catalog.json"
+          "$ref": "https://autostacgis.github.io/autostacgis/v0.0.1/schemas/catalog.json"
         },
         "request": {
-          "$ref": "https://autostacgis.github.io/autostacgis/v1.0.0/schemas/request.json"
+          "$ref": "https://autostacgis.github.io/autostacgis/v0.0.1/schemas/request.json"
         },
         "metadata_structure": {
           "type": "object",
-          "description": "Declared STAC metadata: referenced Item JSON Schemas plus inline Item schema. Strict mode rejects undeclared fields.",
           "properties": {
             "schemas": {
               "type": "array",
@@ -34,6 +33,7 @@
               "default": true
             }
           },
+          "required": [],
           "additionalProperties": false
         }
       },

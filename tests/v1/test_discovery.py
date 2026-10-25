@@ -26,7 +26,7 @@ def test_existing_sidecar_is_reused(tmp_path):
     ] = {"search_glob": "*.tif"}
     result = Application(config, base_dir=tmp_path).discover(
         {
-            "version": "1.0.0",
+            "version": "0.0.1",
             "goal": {
                 "for_each": {
                     "kind": "raster",
@@ -62,7 +62,7 @@ def test_glob_metadata_rules_and_conflict(tmp_path):
     app = Application(config, base_dir=tmp_path)
     found = app.discover(
         {
-            "version": "1.0.0",
+            "version": "0.0.1",
             "goal": {
                 "for_each": {
                     "kind": "raster",
@@ -80,7 +80,7 @@ def test_glob_metadata_rules_and_conflict(tmp_path):
     with pytest.raises(AutoSTACGISError, match="conflicts"):
         app.discover(
             {
-                "version": "1.0.0",
+                "version": "0.0.1",
                 "goal": {
                     "for_each": {
                         "kind": "raster",
@@ -181,7 +181,7 @@ def test_grouped_worldview_enters_inventory_with_both_assets(tmp_path, monkeypat
     monkeypatch.setattr(Reader, "open", lambda self, path, **kwargs: product)
     app = Application(
         {
-            "version": "1.0.0",
+            "version": "0.0.1",
             "plugins": [
                 {"use": "eoreader", "settings": {"search_glob": "**/*.TIL"}},
                 {"use": "pansharpen"},

@@ -1,5 +1,5 @@
 catalog:
-  version: 1.0.0
+  version: 0.0.1
   plugins:
   - use: stac-resolver
   - use: extract_footprints
@@ -7,6 +7,16 @@ catalog:
   - use: markov_seamlines
   - use: mask_by_polygons
   - use: mosaic
+    execution:
+      outputs:
+        result:
+          save: true
+          encode:
+            plugin: geotiff
+          data_out:
+            plugin: filesystem
+          metadata_out:
+            plugin: stac-json
   - use: executor
   - use: events
   - use: geotiff
@@ -40,10 +50,3 @@ request:
           mode: footprint
     - output:
         name: result
-        publish:
-          encode:
-            plugin: geotiff
-          data_out:
-            plugin: filesystem
-          metadata_out:
-            plugin: stac-json

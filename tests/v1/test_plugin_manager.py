@@ -6,7 +6,7 @@ from autostacgis.plugin_manager import PluginManager, metadata
 
 SOURCE = '''"""Check whether a record satisfies the example condition."""
 ID = "example-local"
-VERSION = "1.0.0"
+VERSION = "0.0.1"
 CAPABILITY = "checks"
 REQUIRES = []
 DEPENDENCIES = []
@@ -23,7 +23,7 @@ def test_file_install_uses_namespace_and_versioned_store(tmp_path, monkeypatch):
     assert row["module"] == "autostacgis_plugins.example_local"
     registry = Registry()
     assert registry.load("example-local") == "example-local"
-    assert registry.versions["example-local"] == "1.0.0"
+    assert registry.versions["example-local"] == "0.0.1"
     assert registry.resolve("checks", "example-local").__module__ == "autostacgis_plugins.example_local"
     import base64
     import pickle
@@ -51,7 +51,7 @@ def test_install_rejects_paths_missing_version_and_multiple_capabilities(tmp_pat
     with pytest.raises(AutoSTACGISError):
         manager.install_file("../escape.py", SOURCE)
     with pytest.raises(AutoSTACGISError, match="VERSION"):
-        metadata(SOURCE.replace('VERSION = "1.0.0"', ""))
+        metadata(SOURCE.replace('VERSION = "0.0.1"', ""))
     with pytest.raises((AutoSTACGISError, TypeError)):
         metadata(SOURCE.replace('CAPABILITY = "checks"', 'CAPABILITY = ["checks", "process"]'))
     assert not (tmp_path / "installed.json").exists()
@@ -69,7 +69,7 @@ def test_manifest_install_verifies_git_source_checksum(tmp_path, monkeypatch):
             {
                 "id": "example-local",
                 "description": "Check whether a record satisfies the example condition.",
-                "version": "1.0.0",
+                "version": "0.0.1",
                 "capability": "checks",
                 "requires": [],
                 "module": "autostacgis_plugins.example_local",
@@ -91,11 +91,11 @@ def test_manifest_install_verifies_git_source_checksum(tmp_path, monkeypatch):
 
     monkeypatch.setattr(httpx, "get", fetch)
     manager = PluginManager(tmp_path)
-    row = manager.install("example-local", "1.0.0")
+    row = manager.install("example-local", "0.0.1")
     assert row["origin"] == manifest["plugins"][0]["source"]["url"]
     manifest["plugins"][0]["source"]["sha256"] = "0" * 64
     with pytest.raises(AutoSTACGISError, match="checksum"):
-        manager.install("example-local", "1.0.0")
+        manager.install("example-local", "0.0.1")
 
 
 def test_upgrading_and_rejecting_a_broken_version_preserves_active_plugin(tmp_path, monkeypatch):
@@ -104,13 +104,16 @@ def test_upgrading_and_rejecting_a_broken_version_preserves_active_plugin(tmp_pa
     monkeypatch.setenv("AUTOSTACGIS_PLUGIN_DIR", str(tmp_path))
     manager = PluginManager(tmp_path)
     manager.install_file("example_local.py", SOURCE)
-    updated = SOURCE.replace('VERSION = "1.0.0"', 'VERSION = "1.1.0"')
-    manager.install_file("example_local.py", updated)
-    assert Registry().versions["example-local"] == "1.1.0"
-    broken = SOURCE.replace('VERSION = "1.0.0"', 'VERSION = "2.0.0"').replace(
+    updated = SOURCE.replace("return True", "return False")
+    old = manager.installed()["example-local"]
+    new = manager.install_file("example_local.py", updated)
+    assert old["sha256"] != new["sha256"]
+    assert Registry().resolve("checks", "example-local")()() is False
+    assert Registry().versions["example-local"] == "0.0.1"
+    broken = SOURCE.replace('VERSION = "0.0.1"', 'VERSION = "0.0.1"').replace(
         "IMPLEMENTATION = Check", "IMPLEMENTATION = None"
     )
     with pytest.raises(AutoSTACGISError):
         manager.install_file("example_local.py", broken)
-    assert sys.modules["autostacgis_plugins.example_local"].VERSION == "1.1.0"
-    assert Registry().versions["example-local"] == "1.1.0"
+    assert sys.modules["autostacgis_plugins.example_local"].VERSION == "0.0.1"
+    assert Registry().versions["example-local"] == "0.0.1"

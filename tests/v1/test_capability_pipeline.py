@@ -164,7 +164,8 @@ def test_byte_stream_processing_publishes_with_filesystem_and_stac(tmp_path):
                 "transfer": "file",
                 "outputs": {
                     "result": {
-                        "publish": {
+                        "save": True,
+                        **{
                             "data_out": {"plugin": "filesystem", "settings": {"path": "result.bin"}},
                             "metadata_out": {
                                 "plugin": "stac-json",
@@ -173,7 +174,7 @@ def test_byte_stream_processing_publishes_with_filesystem_and_stac(tmp_path):
                                     "href_field": "properties.example:metadata",
                                 },
                             },
-                        }
+                        },
                     }
                 },
             }
@@ -198,7 +199,8 @@ def test_incompatible_publication_rejected_before_processing(tmp_path):
                 "plugin": "test-process",
                 "outputs": {
                     "result": {
-                        "publish": {"encode": {"plugin": "geotiff"}, "data_out": {"plugin": "filesystem"}}
+                        "save": True,
+                        **{"encode": {"plugin": "geotiff"}, "data_out": {"plugin": "filesystem"}},
                     }
                 },
             }
@@ -391,8 +393,16 @@ def test_large_declared_bytes_spill_before_publication(tmp_path):
     process.contract = declaration(type_="bytes", kind="blob")
     app = app_for(tmp_path, process)
     req = request(data_transfer={"plugin": "buffered-transfer", "settings": {"memory_bytes": 4}})
-    req["goal"]["output"]["publish"] = {
-        "data_out": {"plugin": "filesystem", "settings": {"path": "large.bin"}}
+    req["steps"] = {
+        "save": {
+            "plugin": "test-process",
+            "outputs": {
+                "result": {
+                    "save": True,
+                    "data_out": {"plugin": "filesystem", "settings": {"path": "large.bin"}},
+                }
+            },
+        }
     }
     with app.run(req, [scene()]):
         assert (tmp_path / "large.bin").read_bytes() == b"a" * 50

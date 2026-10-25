@@ -279,6 +279,9 @@ class Application:
             if not hasattr(function, "contract"):
                 raise AutoSTACGISError(f"{name}: processing function must declare a contract")
             contract = merge(deepcopy(function.contract), definition.get("execution", {}))
+            from .results import result_options
+
+            result_options(function.contract, definition.get("execution", {}).get("outputs"))
             if not contract.get("argument_requirements") or not contract.get("outputs"):
                 raise AutoSTACGISError(f"{name}: named input requirements and outputs are required")
             contract["settings"] = settings_for(
@@ -314,7 +317,8 @@ class Application:
                 for reference in policy.get("inherit_metadata", []):
                     if reference.partition(".")[0] not in contract["argument_requirements"]:
                         raise AutoSTACGISError(f"{name}: unknown inheritance input {reference}")
-                self.validate_publication(policy["data_types"], policy.get("publish"))
+                if policy.get("save", False):
+                    self.validate_publication(policy["data_types"], policy)
             result[name] = contract
         return result
 
@@ -339,14 +343,24 @@ class Application:
     def validate_publication(self, types, policy):
         if not policy:
             return
+        from .results import has_expression
+
+        def resolve(capability, call):
+            if not has_expression(call.get("settings", {})):
+                return self.resolve_call(capability, call)[0]
+            try:
+                return self.capabilities[capability][call["plugin"]]
+            except KeyError:
+                raise AutoSTACGISError(f"Unavailable {capability} plugin: {call.get('plugin')}") from None
+
         if policy.get("encode"):
-            definition, _ = self.resolve_call("encode", policy["encode"])
+            definition = resolve("encode", policy["encode"])
             function = self.registry.resolve("encode", definition["implementation"])
             if not set(types) & set(function.input_types):
                 raise AutoSTACGISError(f"{definition['id']}: cannot encode {types}")
             types = function.output_types
         if policy.get("data_out"):
-            definition, _ = self.resolve_call("data_out", policy["data_out"])
+            definition = resolve("data_out", policy["data_out"])
             function = self.registry.resolve("data_out", definition["implementation"])
             if not set(types) & set(function.input_types):
                 raise AutoSTACGISError(f"{definition['id']}: unsupported output types {types}")
@@ -354,7 +368,9 @@ class Application:
             raise AutoSTACGISError("An encoder requires a data_out destination")
         metadata = policy.get("metadata_out", [])
         for call in metadata if isinstance(metadata, list) else [metadata]:
-            self.resolve_call("metadata_out", call)
+            resolve("metadata_out", call)
+        if policy.get("save") and not (policy.get("data_out") or metadata):
+            raise AutoSTACGISError("Saving a result requires data_out or metadata_out")
 
     def request(self, value=None):
         if value is None:

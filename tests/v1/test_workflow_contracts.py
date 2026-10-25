@@ -83,7 +83,7 @@ def test_pansharpen_requires_affine_grids_but_not_projected_crs():
         len(
             app.plan(
                 {
-                    "version": "1.0.0",
+                    "version": "0.0.1",
                     "goal": {
                         "for_each": {
                             "kind": "raster",
@@ -104,7 +104,7 @@ def test_pansharpen_requires_affine_grids_but_not_projected_crs():
     with pytest.raises(NoPlan):
         app.plan(
             {
-                "version": "1.0.0",
+                "version": "0.0.1",
                 "goal": {
                     "for_each": {
                         "kind": "raster",

@@ -12,7 +12,7 @@ from referencing import Registry, Resource
 from .config import read
 from .errors import AutoSTACGISError
 
-STATE = "https://autostacgis.github.io/stac-data-state/v1.0.0/schema.json"
+STATE = "https://autostacgis.github.io/stac-data-state/v0.0.1/schema.json"
 EXTENSIONS = {
     "data_state:": STATE,
     **{

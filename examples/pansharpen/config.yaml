@@ -1,8 +1,18 @@
 catalog:
-  version: 1.0.0
+  version: 0.0.1
   plugins:
   - use: stac-resolver
   - use: pansharpen
+    execution:
+      outputs:
+        result:
+          save: true
+          encode:
+            plugin: zarr
+          data_out:
+            plugin: filesystem
+          metadata_out:
+            plugin: stac-json
   - use: executor
   - use: events
   - use: zarr
@@ -17,10 +27,3 @@ request:
         assets.$asset.data_state:spectral_sampling: multispectral
       require:
         assets.$asset.data_state:pansharpened: true
-      publish:
-        encode:
-          plugin: zarr
-        data_out:
-          plugin: filesystem
-        metadata_out:
-          plugin: stac-json

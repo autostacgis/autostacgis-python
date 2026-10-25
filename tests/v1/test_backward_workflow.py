@@ -26,7 +26,7 @@ def test_namespace_loads_only_selected_entrypoints(monkeypatch):
             "settings_schema": {"type": "object", "properties": {}, "additionalProperties": False},
         }
         return SimpleNamespace(
-            ID="custom", VERSION="1.0.0", REQUIRES=("backward_chain",), CAPABILITY="goal", IMPLEMENTATION=goal
+            ID="custom", VERSION="0.0.1", REQUIRES=("backward_chain",), CAPABILITY="goal", IMPLEMENTATION=goal
         )
 
     def unused():
@@ -40,14 +40,14 @@ def test_namespace_loads_only_selected_entrypoints(monkeypatch):
             SimpleNamespace(name="unused", load=unused),
         ],
     )
-    app = Application({"version": "1.0.0", "plugins": [{"use": "custom"}]})
+    app = Application({"version": "0.0.1", "plugins": [{"use": "custom"}]})
     assert set(app.plugins) == {"custom", "backward_chain", "buffered-transfer"} and loaded == ["selected"]
 
 
 def test_namespace_can_configure_dependency_by_qualified_module(tmp_path):
     app = Application(
         {
-            "version": "1.0.0",
+            "version": "0.0.1",
             "plugins": [
                 {"use": "pansharpen"},
                 {"use": "autostacgis_plugins.storage", "settings": {"tile_size": 256}},
@@ -189,7 +189,7 @@ def test_planned_dem_summary_is_consumed_by_py6s(tmp_path, monkeypatch):
     monkeypatch.setattr(correction, "coefficients", coefficients)
     app = Application(
         {
-            "version": "1.0.0",
+            "version": "0.0.1",
             "plugins": [
                 {"use": name} for name in ("atmospheric_correction", "sample_dem", "executor", "events")
             ],
@@ -234,7 +234,7 @@ def test_automatically_planned_normalization_to_markov_mosaic_executes(tmp_path)
         refresh_metadata(image)
     app = Application(
         {
-            "version": "1.0.0",
+            "version": "0.0.1",
             "plugins": [
                 {"use": name}
                 for name in [

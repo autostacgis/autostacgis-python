@@ -13,7 +13,7 @@ def export(directory):
         folder.mkdir(parents=True, exist_ok=True)
         config = {
             "catalog": {
-                "version": "1.0.0",
+                "version": "0.0.1",
                 "plugins": [
                     {"use": p}
                     for p in ["stac-resolver", *plugins, "executor", "events", "geotiff", "stac-json"]
@@ -28,15 +28,21 @@ def export(directory):
         if name == "pansharpen":
             config["catalog"]["plugins"][-2] = {"use": "zarr"}
 
-        publish = {
+        saving = {
+            "save": True,
             "encode": {"plugin": "zarr" if name == "pansharpen" else "geotiff"},
             "data_out": {"plugin": "filesystem"},
             "metadata_out": {"plugin": "stac-json"},
         }
-        if "for_each" in goal:
-            goal["for_each"]["publish"] = publish
-        else:
-            goal["all_of"].append({"output": {"name": "result", "publish": publish}})
+        producer = (
+            "mosaic"
+            if name == "mosaic"
+            else "pansharpen"
+            if name == "pansharpen"
+            else "global_radiometric_match"
+        )
+        entry = next(p for p in config["catalog"]["plugins"] if p["use"] == producer)
+        entry["execution"] = {"outputs": {"result": saving}}
         (folder / "config.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
         for legacy in ("catalog.yaml", "request.yaml", "catalog.json", "request.json", "config.json"):
             (folder / legacy).unlink(missing_ok=True)

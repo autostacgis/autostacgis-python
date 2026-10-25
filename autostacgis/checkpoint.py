@@ -15,7 +15,7 @@ class CheckpointReference:
     outputs: dict
 
 
-def identity(function, step, inputs):
+def identity(function, step, inputs, *, outputs=None):
     """Content-sensitive identity: implementation, settings, metadata and payload bytes."""
     import hashlib
 
@@ -56,4 +56,8 @@ def identity(function, step, inputs):
                     for chunk in value.chunks():
                         checksum.update(chunk)
             values.append([port, record.kind, record.item, checksum.hexdigest()])
-    return digest([step.module, step.settings, code, values])
+    naming = {
+        port: {key: policy.get(key) for key in ("filename_suffixes", "output_directory")}
+        for port, policy in (outputs or {}).items()
+    }
+    return digest([step.module, step.settings, code, values, naming])
