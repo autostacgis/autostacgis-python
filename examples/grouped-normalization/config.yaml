@@ -1,35 +1,31 @@
-catalog:
-  version: 0.0.1
-  plugins:
-  - use: stac-resolver
-  - use: pansharpen
-  - use: global_radiometric_match
-    execution:
-      outputs:
-        result:
-          save: true
-          encode:
-            plugin: geotiff
-          data_out:
-            plugin: filesystem
-          metadata_out:
-            plugin: stac-json
-  - use: group-by
-  - use: executor
-  - use: events
-  - use: geotiff
-  - use: stac-json
-request:
-  sources:
-  - stac-resolver
-  goal:
-    for_each:
+solver:
+  backward_chain: {}
+goal:
+  metadata-value:
+    kind: raster
+    for_each: true
+    select:
       kind: raster
-      select:
-        assets.$asset.data_state:spectral_sampling: multispectral
       require:
-        assets.$asset.data_state:relative_radiometric_normalization: true
-        assets.$asset.data_state:pansharpened: true
+        assets.$asset.data_state:spectral_sampling: multispectral
+    jsonata: asset.`data_state:relative_radiometric_normalization` = true and asset.`data_state:pansharpened`
+      = true
+    value: true
+metadata_in:
+  stac-resolver: {}
+process:
+  pansharpen: {}
+  global_radiometric_match:
+    outputs:
+      results:
+        save: false
+        encode:
+          plugin: geotiff
+        data_out:
+          plugin: filesystem
+        metadata_out:
+          plugin: stac-json
+execution:
   sequence:
     global_radiometric_match.images:
       plugin: group-by

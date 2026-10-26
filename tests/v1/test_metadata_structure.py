@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import pytest
 
 from autostacgis.errors import AutoSTACGISError
@@ -63,7 +61,7 @@ def test_url_and_inline_schemas_are_combined_and_types_validated():
         stac.validate(value)
 
 
-def test_inline_local_refs_and_legacy_opt_out():
+def test_inline_local_refs_and_explicit_non_strict_mode():
     stac = Stac(
         metadata_structure={
             "inline": {
@@ -75,11 +73,12 @@ def test_inline_local_refs_and_legacy_opt_out():
     value = item()
     value["properties"]["quality"] = 1
     stac.validate(value)
-    legacy = deepcopy(value)
-    legacy["properties"]["anything"] = True
-    Stac().validate(legacy)
+    value["properties"]["anything"] = True
+    Stac(metadata_structure={"strict": False}).validate(value)
     with pytest.raises(AutoSTACGISError, match="anything"):
-        stac.validate(legacy)
+        stac.validate(value)
+    with pytest.raises(AutoSTACGISError, match="quality|anything"):
+        Stac().validate(value)
 
 
 def test_extension_pass_through_patterns_do_not_declare_unknown_fields():

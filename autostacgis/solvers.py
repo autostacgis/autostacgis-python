@@ -13,7 +13,7 @@ from .errors import AutoSTACGISError
 def validate_parameters(schema, value, owner, *, partial=False):
     json_value(value)
     if partial:
-        # Catalog defaults may omit arguments supplied by an invocation. Validate
+        # Plugin defaults may omit arguments supplied by the workflow. Validate
         # individual fields now, and apply cross-parameter rules at that invocation.
         schema = {
             key: definition

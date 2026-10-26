@@ -2,9 +2,10 @@ from copy import deepcopy
 
 import numpy as np
 import pytest
+from v1.helpers import add_plugins, configured
+from v1.helpers import subset as catalog
 
 from autostacgis import Application, Record, Registry
-from autostacgis.builtins import catalog
 from autostacgis.contracts import module
 from autostacgis.data import ArrayRaster, Grid
 from autostacgis.errors import AutoSTACGISError, NoPlan, SearchLimit
@@ -38,9 +39,10 @@ def app_with(*functions):
     registry = Registry()
     config = catalog()
     for function in functions:
-        registry.register(function.__name__, "process", function)
-        config["plugins"].append(
-            {"id": function.__name__, "capabilities": {"process": {"implementation": function.__name__}}}
+        registry.register(function.__name__, "process", function, requires=("gather-all", "group-by"))
+        add_plugins(
+            config,
+            [{"id": function.__name__, "capabilities": {"process": {"implementation": function.__name__}}}],
         )
     return Application(config, registry=registry)
 
@@ -71,10 +73,10 @@ def test_created_objects_feed_other_modules_and_execute(tmp_path):
     app = app_with(first, second)
     app.base_dir = tmp_path
     req = {"goal": {"output": {"require": {"properties.done": True}}}, "modules": ["first", "second"]}
-    plan = app.plan(req, [record(ready=False)])
+    plan = configured(app, req).plan(inputs=[record(ready=False)])
     assert [s.module for s in plan.steps] == ["first", "second"]
     assert plan.steps[1].dependencies == (plan.steps[0].key,)
-    with app.run(req, [record(ready=False)]) as result:
+    with configured(app, req).run(inputs=[record(ready=False)]) as result:
         assert result.records[0].item["properties"]["done"] is True
         assert result.records[0].payload.read(next(result.records[0].payload.windows())).pixels.mean() == 1
 
@@ -93,7 +95,7 @@ def test_cost_chooses_correction_before_resampling():
         "goal": {"output": {"require": {"properties.corrected": True, "properties.resampled": True}}},
         "modules": ["correct", "resample"],
     }
-    plan = app.plan(req, [record(corrected=False, resampled=False, history=[])])
+    plan = configured(app, req).plan(inputs=[record(corrected=False, resampled=False, history=[])])
     assert [s.module for s in plan.steps] == ["correct", "resample"]
     assert plan.cost == 2
 
@@ -124,7 +126,7 @@ def test_shared_dependencies_and_multiple_named_outputs():
             ]
         },
     }
-    plan = app.plan(req, [record(ready=False)])
+    plan = configured(app, req).plan(inputs=[record(ready=False)])
     assert len(plan.steps) == 1 and plan.cost == 1 and len(plan.outputs) == 2
 
 
@@ -140,13 +142,12 @@ def test_same_output_binding_and_for_each_and_extra_inventory():
             }
         },
     }
-    plan = app.plan(
-        req,
-        [
+    plan = configured(app, req).plan(
+        inputs=[
             record("a", ready=False, selected=True),
             record("b", ready=False, selected=True),
             record("unused", ready=False, selected=False),
-        ],
+        ]
     )
     assert len(plan.steps) == 2 and len(plan.outputs) == 2
     req["goal"] = {
@@ -156,18 +157,17 @@ def test_same_output_binding_and_for_each_and_extra_inventory():
         ]
     }
     with pytest.raises(NoPlan):
-        app.plan(
-            {**req, "solver": {"plugin": "backward_chain", "settings": {"max_steps": 2}}},
-            [record(ready=False)],
+        configured(app, {**req, "solver": {"plugin": "backward_chain", "settings": {"max_steps": 2}}}).plan(
+            inputs=[record(ready=False)]
         )
 
 
 def test_unknown_is_not_false():
     op = operation("fix", {"not": {"path": "properties.ready", "equals": True}}, {"properties.done": True})
     with pytest.raises(NoPlan):
-        app_with(op).plan(
-            {"modules": ["fix"], "goal": {"output": {"require": {"properties.done": True}}}}, [record()]
-        )
+        configured(
+            app_with(op), {"modules": ["fix"], "goal": {"output": {"require": {"properties.done": True}}}}
+        ).plan(inputs=[record()])
 
 
 def test_raw_vector_and_pointcloud_selectors():
@@ -182,8 +182,8 @@ def test_raw_vector_and_pointcloud_selectors():
     assert selected(projected, {"projected": True})
     for kind in ("raster", "vector", "point_cloud"):
         app = app_with()
-        result = app.plan(
-            {"modules": [], "goal": {"for_each": {"select": {"kind": kind}}}}, [record(kind=kind)]
+        result = configured(app, {"modules": [], "goal": {"for_each": {"select": {"kind": kind}}}}).plan(
+            inputs=[record(kind=kind)]
         )
         assert result.steps == []
 
@@ -223,10 +223,10 @@ def test_grouping_collects_all_and_can_be_overridden():
             }
         },
     }
-    plan = app.plan(req, [record("a", done=False), record("b", done=False)])
+    plan = configured(app, req).plan(inputs=[record("a", done=False), record("b", done=False)])
     assert len(plan.steps[0].inputs["images"]) == 2
-    plan = app.plan(
-        {**req, "sequence": {"collect.images": None}}, [record("a", done=False), record("b", done=False)]
+    plan = configured(app, {**req, "sequence": {"collect.images": None}}).plan(
+        inputs=[record("a", done=False), record("b", done=False)]
     )
     assert len(plan.steps[0].inputs["images"]) == 1
 
@@ -241,7 +241,7 @@ def test_goal_plugin_composition_and_cycle_rejection():
             {"output": {"name": "answer", "kind": "raster"}},
         ]
     }
-    assert app.plan({"goal": goal, "modules": []}, [r]).cost == 0
+    assert configured(app, {"goal": goal, "modules": []}).plan(inputs=[r]).cost == 0
 
     def loop(settings, records, context):
         return {"plugin": "loop"}
@@ -263,26 +263,26 @@ def test_native_statistics_run(tmp_path):
         "goal": {"output": {"require": {"assets.$asset.data_state:statistics_calculated": True}}},
         "modules": ["statistics"],
     }
-    with app.run(request, [record()]) as result:
+    with configured(app, request).run(inputs=[record()]) as result:
         assert result.records[0].item["assets"]["data"]["bands"][0]["statistics"]["mean"] == 1
 
 
 def test_negative_cost_rejected_and_bound_reported():
     op = operation("bad", {}, {"properties.done": True}, cost=-1)
     with pytest.raises(AutoSTACGISError, match="nonnegative"):
-        app_with(op).plan(
-            {"modules": ["bad"], "goal": {"output": {"require": {"properties.done": True}}}}, [record()]
-        )
+        configured(
+            app_with(op), {"modules": ["bad"], "goal": {"output": {"require": {"properties.done": True}}}}
+        ).plan(inputs=[record()])
     op.contract["cost"] = 1
     with pytest.raises(NoPlan):
-        app_with(op).plan(
+        configured(
+            app_with(op),
             {
                 "modules": ["bad"],
                 "solver": {"plugin": "backward_chain", "settings": {"max_bindings": 1}},
                 "goal": {"output": {"require": {"properties.unreachable": True, "properties.done": True}}},
             },
-            [record()],
-        )
+        ).plan(inputs=[record()])
 
 
 def test_collection_barrier_waits_for_every_member():
@@ -317,7 +317,7 @@ def test_collection_barrier_waits_for_every_member():
         "modules": ["prepare", "together"],
         "goal": {"for_each": {"require": {"properties.done": True}}},
     }
-    plan = app.plan(request, [record("a", ready=True), record("b", ready=False)])
+    plan = configured(app, request).plan(inputs=[record("a", ready=True), record("b", ready=False)])
     assert [s.module for s in plan.steps] == ["prepare", "together"]
     assert len(plan.steps[-1].inputs["images"]) == 2
     assert len(plan.steps[-1].outputs["results"]) == 2
@@ -349,14 +349,14 @@ def test_group_outputs_can_feed_individual_steps():
     finish = operation("finish_each", {"properties.ready": True}, {"properties.done": True})
     app = app_with(together, finish)
     app.plugins["together"]["requires"] = ["gather-all"]
-    plan = app.plan(
+    plan = configured(
+        app,
         {
             "modules": ["together", "finish_each"],
             "goal": {"for_each": {"require": {"properties.done": True}}},
             "solver": {"plugin": "backward_chain", "settings": {"max_steps": 3}},
         },
-        [record("a"), record("b")],
-    )
+    ).plan(inputs=[record("a"), record("b")])
     assert [s.module for s in plan.steps] == ["together", "finish_each", "finish_each"]
     assert all(s.dependencies == (plan.steps[0].key,) for s in plan.steps[1:])
 
@@ -386,14 +386,14 @@ def test_mosaic_cannot_replace_individual_outputs():
     app = app_with(merge)
     app.plugins["merge"]["requires"] = ["gather-all"]
     with pytest.raises(NoPlan):
-        app.plan(
+        configured(
+            app,
             {
                 "modules": ["merge"],
                 "goal": {"for_each": {"require": {"properties.done": True}}},
                 "solver": {"plugin": "backward_chain", "settings": {"max_steps": 1}},
             },
-            [record("a"), record("b")],
-        )
+        ).plan(inputs=[record("a"), record("b")])
 
 
 def test_mosaic_metadata_requires_all_contributors_to_agree():
@@ -417,7 +417,7 @@ def test_any_of_can_skip_an_empty_input_selection():
             "any_of": [{"for_each": {"select": {"kind": "point_cloud"}}}, {"output": {"kind": "raster"}}]
         },
     }
-    assert app.plan(request, [record()]).steps == []
+    assert configured(app, request).plan(inputs=[record()]).steps == []
 
 
 def test_mixed_stac_assets_bind_independent_data_kinds():
@@ -443,14 +443,14 @@ def test_mixed_stac_assets_bind_independent_data_kinds():
 def test_subproblem_limit_is_explicit():
     op = operation("fix", {}, {"properties.done": True})
     with pytest.raises(SearchLimit, match="subproblem"):
-        app_with(op).plan(
+        configured(
+            app_with(op),
             {
                 "modules": ["fix"],
                 "solver": {"plugin": "backward_chain", "settings": {"max_states": 1}},
                 "goal": {"output": {"require": {"properties.done": True}}},
             },
-            [record()],
-        )
+        ).plan(inputs=[record()])
 
 
 def test_named_step_disambiguates_available_producers():
@@ -462,7 +462,7 @@ def test_named_step_disambiguates_available_producers():
         "goal": {"output": {"require": {"properties.finished": True}}},
         "steps": {"chosen": {"plugin": "first"}, "rest": {"auto": True}},
     }
-    plan = app.plan(request, [record()])
+    plan = configured(app, request).plan(inputs=[record()])
     assert [(s.name, s.module) for s in plan.steps] == [("chosen", "first")]
 
 
@@ -475,7 +475,7 @@ def test_automatic_gap_preserves_explicit_stage_barriers():
         "goal": {"output": {"require": {"properties.finished": True}}},
         "steps": {"required": {"plugin": "first"}, "rest": {"auto": True}},
     }
-    plan = app.plan(request, [record()])
+    plan = configured(app, request).plan(inputs=[record()])
     assert len(plan.steps) == 2
     assert plan.steps[0].key in plan.steps[1].dependencies
     assert plan.cost == 2
@@ -491,5 +491,5 @@ def test_nested_step_overrides_preserve_unspecified_defaults():
         "goal": {"output": {"require": {"properties.finished": True}}},
         "steps": {"adjust": {"plugin": "transform", "param:calibration": {"offset": 4}}},
     }
-    plan = app.plan(request, [record()])
+    plan = configured(app, request).plan(inputs=[record()])
     assert plan.steps[0].settings["calibration"] == {"gain": 3, "offset": 4}

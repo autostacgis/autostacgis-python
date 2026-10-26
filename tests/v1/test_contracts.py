@@ -73,9 +73,9 @@ def test_optical_schema_and_core():
 
 def test_schema_rejects_invalid_shapes():
     with pytest.raises(AutoSTACGISError):
-        validate({"sources": []}, "catalog")
+        validate({"sources": []}, "config")
     with pytest.raises(AutoSTACGISError):
-        validate({"version": "0.0.1", "plugins": {"processors": []}}, "catalog")
+        validate({"version": "0.0.1", "plugins": {"processors": []}}, "config")
 
 
 def test_path_escaped_backslash_before_separator():

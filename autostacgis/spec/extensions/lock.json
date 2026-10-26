@@ -48,6 +48,6 @@
     "repository": "https://github.com/autostacgis/stac-data-state",
     "commit": "b0ac764697b347692cbd975d5a3f3407cefdf1cf",
     "path": "json-schema/schema.json",
-    "sha256": "c257d32ecae775070835b1dcbd1b32ff9382026473e0479ccb84d322be8273d9"
+    "sha256": "77856cc2283848c95aa90ba3a5a9b6e55d49e9031a6f260af042c3659a794519"
   }
 }

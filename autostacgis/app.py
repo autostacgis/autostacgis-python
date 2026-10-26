@@ -4,7 +4,7 @@ from copy import deepcopy
 from pathlib import Path
 
 from .config import merge, read, validate
-from .dependencies import PluginContext, requirements, validate_dependencies
+from .dependencies import PluginContext, validate_dependencies
 from .errors import AutoSTACGISError, NoPlan, SearchLimit
 from .executor import Executor
 from .model import digest
@@ -15,111 +15,14 @@ from .stac import Stac
 
 
 class Application:
-    def __init__(self, catalog=None, *, base_dir=".", registry=None, events=None):
-        from .workflow_config import is_workflow, normalize
+    def __init__(self, configuration=None, *, base_dir=".", registry=None, events=None):
+        from .workflow_config import default_workflow, normalize
 
-        self.workflow = deepcopy(catalog) if is_workflow(catalog) else None
-        self.trigger_name = None
-        if self.workflow is not None:
-            registry = registry or Registry(builtins=False)
-            catalog = normalize(self.workflow, registry)
-            self.trigger_name = next(iter(self.workflow.get("trigger", {})), "now")
-        if catalog is None:
-            from .builtins.catalog import catalog as builtin_catalog
-
-            catalog = builtin_catalog()
-        self.default_request = None
-        structure = catalog.get("metadata_structure")
-        if "catalog" in catalog or "request" in catalog:
-            config = validate(catalog, "config")
-            self.default_request = config["request"]
-            catalog = config.get("catalog")
-            if catalog is None:
-                from .builtins.catalog import catalog as builtin_catalog
-
-                catalog = builtin_catalog()
-        self.catalog = validate(catalog, "catalog")
+        self.workflow = validate(default_workflow() if configuration is None else configuration, "config")
+        self.registry = registry or Registry(builtins=False)
+        self.catalog, self._invocation = normalize(self.workflow, self.registry)
         self.base_dir = Path(base_dir).resolve()
-        compact = any("use" in entry for entry in catalog["plugins"])
-        self.registry = registry or Registry(builtins=not compact)
-        if compact:
-            explicit = {}
-            for entry in self.catalog["plugins"]:
-                if "use" in entry:
-                    name = self.registry.load(entry["use"])
-                    definition = self.registry.definition(name)
-                    configured = entry.get("settings", {})
-                    targets = (
-                        ["process"]
-                        if "process" in definition["capabilities"]
-                        else list(definition["capabilities"])
-                    )
-                    if entry.get("execution") and "process" not in definition["capabilities"]:
-                        raise AutoSTACGISError(f"{name}: execution options require a process capability")
-                    if "execution" in entry:
-                        definition["capabilities"]["process"]["execution"] = entry["execution"]
-                    for target in targets:
-                        capability = definition["capabilities"][target]
-                        capability["settings"] = merge(capability.get("settings", {}), configured)
-                else:
-                    name, definition = entry["id"], entry
-                    for capability in definition["capabilities"].values():
-                        self.registry.load(capability["implementation"])
-                if name in explicit:
-                    raise AutoSTACGISError(f"Duplicate selected plugin {name}")
-                explicit[name] = definition
-            resolved = {}
-
-            def select(name, active=()):
-                if name in active:
-                    raise AutoSTACGISError("Recursive plugin dependency: " + " -> ".join((*active, name)))
-                if name in resolved:
-                    return
-                definition = explicit[name] if name in explicit else self.registry.definition(name)
-                for dependency in sorted(requirements({name: definition}, self.registry, name)):
-                    self.registry.load(dependency)
-                    select(dependency, (*active, name))
-                resolved[name] = definition
-
-            for name in explicit:
-                select(name)
-            self.catalog["plugins"] = list(resolved.values())
-            self.catalog.setdefault("runtime", {})
-            for name in ("executor", "storage", "events"):
-                if name in resolved and "services" in self.registry.plugins.get(name, {}):
-                    self.catalog["runtime"].setdefault(
-                        name,
-                        deepcopy(
-                            explicit.get(name, self.registry.definition(name))["capabilities"]["services"]
-                        ),
-                    )
-        from .builtins.catalog import DEFAULTS
-
-        self.catalog["defaults"] = merge(DEFAULTS, self.catalog.get("defaults", {}))
-        selected = {p["id"] for p in self.catalog["plugins"]}
-
-        def include(name):
-            self.registry.load(name)
-            for dependency in self.registry.requirements[name]:
-                include(dependency)
-            if name not in selected:
-                self.catalog["plugins"].append(self.registry.definition(name))
-                selected.add(name)
-
-        for call in self.catalog["defaults"].values():
-            include(call["plugin"])
-        if self.workflow is not None:
-            for name in ("executor", "storage", "events"):
-                include(name)
-                definition = next(p for p in self.catalog["plugins"] if p["id"] == name)
-                self.catalog.setdefault("runtime", {}).setdefault(
-                    name, deepcopy(definition["capabilities"]["services"])
-                )
-        solvers = [p["id"] for p in self.catalog["plugins"] if "solver" in p["capabilities"]]
-        if self.catalog.get("solver"):
-            include(self.catalog["solver"]["plugin"])
-        elif not solvers:
-            include("backward_chain")
+        self.trigger_name = next(iter(self.workflow.get("trigger", {})), "now")
         self.events = events
         self.active_services = None
         self.active_transfers = None
@@ -156,12 +59,11 @@ class Application:
         if len(solvers) != 1:
             raise AutoSTACGISError("Exactly one solver plugin must be selected; found: " + ", ".join(solvers))
         self.solver_name = next(iter(solvers))
-        if self.workflow is not None:
-            self.trigger_name = next(iter(self.capabilities["trigger"]), "now")
+        self.trigger_name = next(iter(self.capabilities["trigger"]), "now")
         self.solver_implementation = self.registry.resolve(
             "solver", solvers[self.solver_name]["implementation"]
         )
-        self.solver_settings({})
+        self.solver_settings()
         for name, definition in self.capabilities["goal"].items():
             implementation = self.registry.resolve("goal", definition["implementation"])
             required = implementation.contract["solver"]
@@ -170,10 +72,7 @@ class Application:
                     f"Goal {name} requires solver {required}; active solver is {self.solver_name}"
                 )
 
-        self.stac = Stac(
-            {uri: self.path(p) for uri, p in catalog.get("extension_schemas", {}).items()},
-            metadata_structure=structure,
-        )
+        self.stac = Stac(metadata_structure=self.workflow.get("metadata_structure"))
         self.metadata_structure = self.stac.metadata_structure
         self.sources = {}
         self.acquirers = {}
@@ -184,15 +83,7 @@ class Application:
         self.work = self.path("work")
 
     def snapshot(self):
-        if self.workflow is not None:
-            return deepcopy(self.workflow)
-        result = {
-            "catalog": deepcopy(self.catalog),
-            "request": deepcopy(self.default_request or {"goal": {"output": {}}}),
-        }
-        if self.metadata_structure.enabled:
-            result["metadata_structure"] = self.metadata_structure.definition()
-        return result
+        return deepcopy(self.workflow)
 
     @classmethod
     def from_file(cls, path, **kwargs):
@@ -212,16 +103,8 @@ class Application:
             validate_parameters(function.contract["settings_schema"], settings, plugin, partial=partial)
         return settings_for(function, settings, partial=partial)
 
-    def solver_settings(self, request):
+    def solver_settings(self):
         settings = deepcopy(self.capabilities["solver"][self.solver_name].get("settings", {}))
-        for call in (self.catalog.get("solver"), request.get("solver")):
-            if call is None:
-                continue
-            if call["plugin"] != self.solver_name:
-                raise AutoSTACGISError(
-                    f"Only solver {self.solver_name} is active; cannot select {call['plugin']}"
-                )
-            settings = merge(settings, call.get("settings", {}))
         return validate_parameters(
             self.solver_implementation.contract["settings_schema"], settings, self.solver_name
         )
@@ -232,7 +115,7 @@ class Application:
         validate_parameters(
             self.solver_implementation.contract["goal_schema"], prepared["goal"], self.solver_name + " goal"
         )
-        solver = self.solver_implementation(self, prepared, self.solver_settings(request))
+        solver = self.solver_implementation(self, prepared, self.solver_settings())
         if not all(callable(getattr(solver, method, None)) for method in ("plan", "validate_outputs")):
             raise AutoSTACGISError(f"{self.solver_name}: solver must implement plan and validate_outputs")
         return solver, prepared
@@ -286,10 +169,7 @@ class Application:
                 raise AutoSTACGISError(f"{name}: named input requirements and outputs are required")
             contract["settings"] = settings_for(
                 function,
-                merge(
-                    merge(contract.get("settings", {}), definition.get("settings", {})),
-                    request.get("module_settings", {}).get(name, {}),
-                ),
+                merge(contract.get("settings", {}), definition.get("settings", {})),
                 partial=any(step.get("plugin") == name for step in request.get("steps", {}).values()),
             )
             for port, declaration in contract["argument_requirements"].items():
@@ -372,29 +252,18 @@ class Application:
         if policy.get("save") and not (policy.get("data_out") or metadata):
             raise AutoSTACGISError("Saving a result requires data_out or metadata_out")
 
-    def request(self, value=None):
-        if value is None:
-            value = self.default_request
-        if isinstance(value, (str, Path)):
-            value = read(value)
-        if isinstance(value, dict) and "request" in value:
-            value = value["request"]
-        request = validate(value, "request")
-        self.solver_settings(request)
+    def _execution(self):
+        """Validate the execution compiled from this application's single workflow."""
+        request = deepcopy(self._invocation)
         self.work = self.path(request.get("work_directory", "work"))
-        for capability, field in [("metadata_in", "sources")]:
-            for name in request.get(field, []):
-                if name not in self.capabilities[capability]:
-                    raise AutoSTACGISError(f"Unknown {capability} plugin {name}")
-        if self.capabilities["data_transfer"]:
-            self.resolve_call(
-                "data_transfer", request.get("data_transfer", self.catalog["defaults"]["data_transfer"])
-            )
+        for name in request.get("sources", []):
+            if name not in self.capabilities["metadata_in"]:
+                raise AutoSTACGISError(f"Unknown metadata_in plugin {name}")
+        self.resolve_call(
+            "data_transfer", request.get("data_transfer", self.catalog["defaults"]["data_transfer"])
+        )
         if request.get("checkpoint"):
             self.resolve_call("checkpoint", request["checkpoint"])
-        for name in request.get("module_settings", {}):
-            if name not in self.capabilities["process"]:
-                raise AutoSTACGISError(f"Unknown module settings target: {name}")
         modules = self.modules(request)
         from .workflow import validate_steps
 
@@ -408,8 +277,8 @@ class Application:
                     self.resolve_call("sequence", entry)
         return request
 
-    def discover(self, request=None):
-        request = self.request(request)
+    def discover(self):
+        request = self._execution()
         records, seen = [], {}
         sources = request.get("sources", [])
         # Inventory-dependent sources are discovered after ordinary sources,
@@ -443,25 +312,24 @@ class Application:
                 records.append(record)
         return records
 
-    def plan(self, request=None, inputs=None):
-        request = self.request(request)
-        records = self.discover(request) if inputs is None else inputs
+    def plan(self, *, inputs=None):
+        request = self._execution()
+        records = self.discover() if inputs is None else inputs
         solver, _ = self.make_solver(request, records)
         return solver.plan(records)
 
-    def available(self, request=None, inputs=None):
-        request = self.request(request)
-        records = self.discover(request) if inputs is None else inputs
+    def available(self, *, inputs=None):
+        records = self.discover() if inputs is None else inputs
         try:
-            return {"requested": self.plan(request, records).to_dict()}
+            return {"requested": self.plan(inputs=records).to_dict()}
         except (NoPlan, SearchLimit) as exc:
             return {"requested": {"status": type(exc).__name__, "reason": str(exc)}}
 
-    def run(self, request=None, inputs=None):
-        request = self.request(request)
-        records = self.discover(request) if inputs is None else [r.clone() for r in inputs]
+    def run(self, *, inputs=None):
+        request = self._execution()
+        records = self.discover() if inputs is None else [r.clone() for r in inputs]
         if request.get("discovery", False):
-            return self.plan(request, records)
+            return self.plan(inputs=records)
         inspected = set()
         while True:
             solver, prepared = self.make_solver(request, records)
@@ -490,11 +358,9 @@ class Application:
                 records[index].key = key
                 inspected.add(key)
 
-    def trigger(self, name=None, request=None):
-        name = name or self.trigger_name or "now"
+    def trigger(self):
+        name = self.trigger_name
         if name == "now" and name not in self.capabilities["trigger"]:
-            return self.run(request)
+            return self.run()
         definition, settings = self.resolve_call("trigger", {"plugin": name})
-        return self.registry.resolve("trigger", definition["implementation"])(
-            self.scope(name), settings, request
-        )
+        return self.registry.resolve("trigger", definition["implementation"])(self.scope(name), settings)

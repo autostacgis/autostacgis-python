@@ -7,14 +7,6 @@ from .errors import AutoSTACGISError
 from .registry import CAPABILITIES
 
 
-def is_workflow(document):
-    return (
-        isinstance(document, dict)
-        and not set(document) & {"catalog", "request", "plugins"}
-        and bool(set(document) & set(CAPABILITIES))
-    )
-
-
 def default_workflow():
     return {
         "solver": {"backward_chain": {}},
@@ -77,7 +69,7 @@ def referenced_plugins(document):
 
 
 def normalize(document, registry):
-    """Convert public grouped JSON to the executor's internal catalog/request model.
+    """Compile the workflow into private plugin definitions and execution parameters.
 
     Explicit settings override every plugin fragment; fragments fill missing values.
     Goals may contain a list of parameter objects to compose several instances.
@@ -93,6 +85,16 @@ def normalize(document, registry):
     if not isinstance(explicit.get("goal"), dict) or not explicit["goal"]:
         raise AutoSTACGISError("At least one goal plugin must be configured")
     resolved = deepcopy(explicit)
+    for name in ("executor", "storage", "events"):
+        resolved.setdefault("services", {}).setdefault(name, {})
+    transfer = resolved.get("execution", {}).get("data_transfer", {"plugin": "buffered-transfer"})
+    resolved.setdefault("data_transfer", {}).setdefault(transfer["plugin"], {})
+    from .dependencies import configured_plugins
+
+    for name in configured_plugins(resolved.get("execution", {})):
+        registry.load(name)
+        capability = next(iter(registry.plugins[name]))
+        resolved.setdefault(capability, {}).setdefault(name, {})
     processed = set()
     while True:
         pending = [
@@ -157,19 +159,18 @@ def normalize(document, registry):
                         registry.plugins[name][capability].contract["settings_schema"], call, name
                     )
                 goals.extend({"plugin": name, "settings": call} for call in calls)
-                entries.append({"use": name})
+                definition = registry.definition(name)
             else:
                 if not isinstance(settings, dict):
                     raise AutoSTACGISError(f"{name}: expected a parameter object")
                 parameters = deepcopy(settings)
                 outputs = parameters.pop("outputs", None) if capability == "process" else None
-                entries.append(
-                    {
-                        "use": name,
-                        "settings": parameters,
-                        **({"execution": {"outputs": outputs}} if outputs is not None else {}),
-                    }
-                )
+                definition = registry.definition(name)
+                entry = definition["capabilities"][capability]
+                entry["settings"] = merge(entry.get("settings", {}), parameters)
+                if outputs is not None:
+                    entry["execution"] = {"outputs": outputs}
+            entries.append(definition)
     execution = deepcopy(resolved.get("execution", {}))
     if not isinstance(execution, dict) or set(execution) & {"goal", "module_settings", "solver", "runtime"}:
         raise AutoSTACGISError(
@@ -177,7 +178,13 @@ def normalize(document, registry):
         )
     request = {**execution, "goal": goals[0] if len(goals) == 1 else {"all_of": goals}}
     request.setdefault("sources", list(resolved.get("metadata_in", {})))
-    result = {"catalog": {"version": "0.0.1", "plugins": entries}, "request": request}
-    if "metadata_structure" in resolved:
-        result["metadata_structure"] = resolved["metadata_structure"]
-    return validate(result, "config")
+    catalog = {
+        "plugins": entries,
+        "defaults": {"data_transfer": transfer},
+        "runtime": {
+            entry["id"]: deepcopy(entry["capabilities"]["services"])
+            for entry in entries
+            if "services" in entry["capabilities"]
+        },
+    }
+    return catalog, request

@@ -3,16 +3,12 @@ from types import SimpleNamespace
 
 import pytest
 from autostacgis_plugins import modules
-from helpers import scene, subset
+from helpers import configured, scene, subset
 
 from autostacgis import Application, Registry
 from autostacgis.errors import AutoSTACGISError
 from autostacgis.executor import Context, _execute
 from autostacgis.runtime.registry import Services
-
-
-def entry(config, name):
-    return next(plugin for plugin in config["plugins"] if plugin["id"] == name)
 
 
 def test_builtin_sources_own_their_implementations_and_declarations():
@@ -22,12 +18,12 @@ def test_builtin_sources_own_their_implementations_and_declarations():
         assert module.IMPLEMENTATION.__module__ == module.__name__
 
 
-def test_provider_dependencies_cannot_be_removed_by_catalog():
-    config = subset("pansharpen")
-    entry(config, "pansharpen")["requires"] = []
-    config["plugins"].remove(entry(config, "storage"))
-    with pytest.raises(AutoSTACGISError, match="unavailable: storage"):
-        Application(config)
+def test_provider_dependencies_are_loaded_from_code():
+    document = subset("pansharpen")
+    document.pop("services")
+    app = Application(document)
+    assert "storage" in app.plugins
+    assert "storage" in app.registry.requirements["pansharpen"]
 
 
 def test_declared_capability_calls_are_scoped_to_the_callee():
@@ -45,10 +41,8 @@ def test_declared_capability_calls_are_scoped_to_the_callee():
     )
     with pytest.raises(AutoSTACGISError, match="undeclared dependency same-fields"):
         app.scope("pansharpen").call("same-fields", "checks", {}, {})
-    # A dependency's dependencies are not automatically granted to its caller.
-    entry(config, "pansharpen")["requires"] = list(
-        set(entry(config, "pansharpen")["requires"]) | {"compatible-optical"}
-    )
+    # Selecting the helper does not grant its dependencies to callers.
+    config["checks"]["compatible-optical"] = {}
     app = Application(config)
     with pytest.raises(AutoSTACGISError, match="undeclared dependency same-fields"):
         app.scope("pansharpen").call("same-fields", "checks", {}, {})
@@ -68,13 +62,11 @@ def test_execution_context_enforces_service_access(tmp_path):
 
 def test_declared_multiprocessing_reuses_the_global_pool(tmp_path):
     config = subset("pansharpen")
-    entry(config, "pansharpen")["requires"].append("multiprocessing")
-    config["runtime"]["executor"] = {
-        "implementation": "executor",
-        "settings": {"backend": "multiprocessing", "workers": 2},
-    }
-    app = Application(config)
-    with Services(app.registry, config["runtime"], directory=tmp_path, plugins=app.plugins) as services:
+    registry = Registry()
+    registry.requirements["pansharpen"] += ("multiprocessing",)
+    config["services"]["executor"] = {"backend": "multiprocessing", "workers": 2}
+    app = Application(config, registry=registry)
+    with Services(app.registry, app.catalog["runtime"], directory=tmp_path, plugins=app.plugins) as services:
         executor = services.get("executor")
         context = Context(services, tmp_path, {}, "pansharpen", owner="pansharpen")
         assert context.service("multiprocessing") is executor
@@ -171,9 +163,10 @@ def test_declared_action_delegation(tmp_path):
         return {"result": inputs["image"]}
 
     registry.register("test-mask", "process", apply)
-    entry(config, "apply_mask")["capabilities"]["process"]["implementation"] = "test-mask"
+    apply.contract = registry.resolve("process", "apply_mask").contract
+    registry.plugins["apply_mask"]["process"] = apply
     app = Application(config, registry=registry)
-    with Services(registry, config["runtime"], directory=tmp_path, plugins=app.plugins) as services:
+    with Services(registry, app.catalog["runtime"], directory=tmp_path, plugins=app.plugins) as services:
         context = Context(services, tmp_path, {}, "mask_by_polygons", owner="mask_by_polygons")
         records = [scene()]
         assert context.call("apply_mask", "process", {"image": records}) == {"result": records}
@@ -182,7 +175,8 @@ def test_declared_action_delegation(tmp_path):
 def test_no_sources_runs_without_implicit_discovery(tmp_path):
     app = Application(subset("pansharpen"), base_dir=tmp_path)
     assert (
-        app.discover(
+        configured(
+            app,
             {
                 "version": "0.0.1",
                 "goal": {
@@ -194,7 +188,7 @@ def test_no_sources_runs_without_implicit_discovery(tmp_path):
                         },
                     }
                 },
-            }
-        )
+            },
+        ).discover()
         == []
     )

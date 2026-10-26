@@ -129,6 +129,9 @@ def test_any_named_stream_result_can_save_while_another_stays_unsaved(tmp_path):
         "goal": {"metadata-value": {"path": "properties.result_type", "value": "report"}},
         "process": {"streams": {"outputs": {"preview": {"save": True}}}},
     }
+    document["metadata_structure"] = {
+        "inline": {"properties": {"properties": {"properties": {"result_type": {"type": "string"}}}}}
+    }
     app = Application(document, registry=registry, base_dir=tmp_path)
     with app.run(inputs=[scene()]) as result:
         assert result.records[0].item["properties"]["result_type"] == "report"

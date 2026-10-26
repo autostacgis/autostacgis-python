@@ -11,23 +11,24 @@ from autostacgis.triggers import FileTrigger, TimedTrigger
 
 def test_trigger_registration_is_inert_and_required_parameters_are_checked_on_start():
     from autostacgis import Application
+    from autostacgis.workflow_config import default_workflow
 
-    application = Application()
+    document = default_workflow()
+    document["trigger"] = {"watchdog": {}}
+    application = Application(document)
     assert "watchdog" in application.capabilities["trigger"]
     with pytest.raises(ValidationError, match="watches"):
-        application.trigger("watchdog")
+        application.trigger()
 
 
 def app(tmp_path):
     return SimpleNamespace(
-        catalog={"version": "0.0.1", "plugins": []},
         snapshot=lambda: {
-            "catalog": {"version": "0.0.1", "plugins": []},
-            "request": {"goal": {"output": {}}},
+            "solver": {"backward_chain": {}},
+            "goal": {"metadata-value": {"jsonata": "true", "value": True}},
         },
         base_dir=tmp_path,
         path=lambda value: tmp_path / value,
-        request=lambda value: value or {"goal": {"output": {}}},
     )
 
 
@@ -36,8 +37,8 @@ def test_timed_date_job_passes_raw_arguments_and_closes_cleanly(tmp_path, monkey
     called = Event()
     invocations = []
 
-    def execute(catalog, base_dir, request):
-        invocations.append((catalog, base_dir, request))
+    def execute(configuration, base_dir):
+        invocations.append((configuration, base_dir))
         called.set()
 
     monkeypatch.setattr("autostacgis.triggers.timed.execute", execute)
@@ -63,8 +64,8 @@ def test_file_trigger_filters_and_debounces_real_files_and_preserves_move_destin
     called = Event()
     requests = []
 
-    def execute(catalog, base_dir, request):
-        requests.append(request)
+    def execute(configuration, base_dir):
+        requests.append(configuration)
         called.set()
 
     monkeypatch.setattr("autostacgis.triggers.files.execute", execute)
@@ -81,14 +82,17 @@ def test_file_trigger_filters_and_debounces_real_files_and_preserves_move_destin
         (tmp_path / "ignored.txt").write_text("no")
         (tmp_path / "image.tif").write_text("test")
         assert called.wait(4)
-        assert all(value["query"]["trigger_event"]["src_path"].endswith("image.tif") for value in requests)
+        assert all(
+            value["execution"]["query"]["trigger_event"]["src_path"].endswith("image.tif")
+            for value in requests
+        )
         called.clear()
         controller.handler.dispatch(
             FileMovedEvent(str(tmp_path / "temporary.part"), str(tmp_path / "final.tif"))
         )
         assert called.wait(4)
-    assert requests[-1]["query"]["trigger_event"]["dest_path"] == str(tmp_path / "final.tif")
-    assert requests[-1]["query"]["files"] == [str(tmp_path / "final.tif")]
+    assert requests[-1]["execution"]["query"]["trigger_event"]["dest_path"] == str(tmp_path / "final.tif")
+    assert requests[-1]["execution"]["query"]["files"] == [str(tmp_path / "final.tif")]
     assert controller.last_error is None
     assert not controller.observer.is_alive()
     assert not controller.worker.is_alive()

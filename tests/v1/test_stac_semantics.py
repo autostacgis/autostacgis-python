@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from helpers import require_extra, scene, subset
+from helpers import configured, require_extra, scene, subset
 
 from autostacgis import Application
 from autostacgis.data import Window
@@ -32,7 +32,8 @@ def test_quantity_alone_does_not_satisfy_physical_product_goal(tmp_path, unit):
         {"cf:standard_name": "surface_bidirectional_reflectance", "unit": unit}
     )
     with pytest.raises(NoPlan):
-        Application(subset(), base_dir=tmp_path).plan(
+        configured(
+            Application(subset(), base_dir=tmp_path),
             {
                 "version": "0.0.1",
                 "goal": {
@@ -51,8 +52,7 @@ def test_quantity_alone_does_not_satisfy_physical_product_goal(tmp_path, unit):
                     }
                 },
             },
-            [image],
-        )
+        ).plan(inputs=[image])
 
 
 def test_pansharpen_decodes_scale_offset_and_updates_band_state(tmp_path):
@@ -63,7 +63,8 @@ def test_pansharpen_decodes_scale_offset_and_updates_band_state(tmp_path):
     ]
     pan.item["assets"]["data"].update({"raster:scale": 0.0001, "raster:offset": 0})
     before = deepcopy(image.item)
-    with Application(subset("pansharpen"), base_dir=tmp_path).run(
+    with configured(
+        Application(subset("pansharpen"), base_dir=tmp_path),
         {
             "version": "0.0.1",
             "goal": {
@@ -74,8 +75,7 @@ def test_pansharpen_decodes_scale_offset_and_updates_band_state(tmp_path):
                 }
             },
         },
-        [image, pan],
-    ) as run:
+    ).run(inputs=[image, pan]) as run:
         result = run.records[0]
         np.testing.assert_allclose(result.payload.read(Window(0, 0, 4, 4)).pixels, 0.05)
         asset = result.item["assets"]["data"]
@@ -123,26 +123,18 @@ def test_local_header_uses_standard_fields_and_detects_conflicts(tmp_path):
         inspect_raster(record, {}, app)
 
 
-def test_provider_adapter_schema_identifiers_are_normalized_without_fetching_old_versions(monkeypatch):
-    from autostacgis.stac import LEGACY_STATE, STATE
+def test_obsolete_owned_schema_is_rejected_without_translation(monkeypatch):
+    from autostacgis.stac import STATE
 
-    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: pytest.fail("Unexpected schema download"))
     item = scene().item
-    Stac.extensions(item)
-    item["stac_extensions"] = [LEGACY_STATE if uri == STATE else uri for uri in item["stac_extensions"]]
-    before = deepcopy(item)
-    stac = Stac(
-        metadata_structure={
-            "schemas": item["stac_extensions"],
-            "inline": {"properties": {"properties": {"properties": {"platform": {"type": "string"}}}}},
-        }
-    )
-    normalized = stac.validate(item)
-    assert STATE in normalized["stac_extensions"]
-    assert LEGACY_STATE not in normalized["stac_extensions"]
-    assert item == before
-    Stac.extensions(item)
-    assert STATE in item["stac_extensions"] and LEGACY_STATE not in item["stac_extensions"]
+    obsolete = "https://autostacgis.github.io/stac-data-state/v1.0.0/schema.json"
+    item["stac_extensions"] = [obsolete]
+    original = deepcopy(item)
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: pytest.fail("old schemas must not be fetched"))
+    with pytest.raises(Exception, match="Unsupported data-state schema"):
+        Stac().validate(item)
+    assert item == original
+    assert STATE not in item["stac_extensions"]
 
 
 def test_eodag_rules_use_same_standard_fields_and_retain_provider_metadata():

@@ -1,4 +1,4 @@
-"""AutoSTACGIS 1.0 reference implementation."""
+"""AutostacGIS workflow planning and execution."""
 
 from .app import Application
 from .artifacts import Artifact

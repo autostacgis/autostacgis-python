@@ -13,16 +13,16 @@ from .config import read
 from .errors import AutoSTACGISError
 
 STATE = "https://autostacgis.github.io/stac-data-state/v0.0.1/schema.json"
-LEGACY_STATE = "https://autostacgis.github.io/stac-data-state/v1.0.0/schema.json"
 
 
-def current_schema(uri):
-    """Normalize the earlier provider adapter identifier to the prerelease schema."""
-    return STATE if uri == LEGACY_STATE else uri
+def supported_schema(uri):
+    if uri.startswith("https://autostacgis.github.io/stac-data-state/") and uri != STATE:
+        raise AutoSTACGISError(f"Unsupported data-state schema: {uri}; use {STATE}")
 
 
 EXTENSIONS = {
     "data_state:": STATE,
+    "autostacgis:": STATE,
     **{
         prefix + ":": f"https://stac-extensions.github.io/{name}/v{version}/schema.json"
         for prefix, name, version in [
@@ -55,6 +55,7 @@ class Stac:
         self.metadata_structure = MetadataStructure(metadata_structure, self)
 
     def retrieve(self, uri):
+        supported_schema(uri)
         if uri not in self.schemas:
             if urlsplit(uri).scheme != "https":
                 raise AutoSTACGISError(f"Extension schema must use HTTPS or be registered locally: {uri}")
@@ -70,11 +71,8 @@ class Stac:
         Draft7Validator({"$ref": uri}, registry=registry, format_checker=FormatChecker()).validate(item)
 
     def validate(self, item):
-        if LEGACY_STATE in item.get("stac_extensions", []):
-            item = deepcopy(item)
-            item["stac_extensions"] = list(
-                dict.fromkeys(current_schema(uri) for uri in item["stac_extensions"])
-            )
+        for uri in item.get("stac_extensions", []):
+            supported_schema(uri)
         version = item.get("stac_version", "1.1.0")
         self.validate_schema(item, f"https://schemas.stacspec.org/v{version}/item-spec/json-schema/item.json")
         for uri in item.get("stac_extensions", []):
@@ -103,7 +101,7 @@ class Stac:
 
         visit(item.get("properties", {}))
         visit(item.get("assets", {}))
-        declared = [current_schema(uri) for uri in item.get("stac_extensions", [])]
+        declared = item.get("stac_extensions", [])
 
         def declared_family(uri):
             location = urlsplit(uri)

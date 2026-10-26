@@ -4,7 +4,7 @@ from .common import ManagedTrigger, execute, launch
 
 
 class TimedTrigger(ManagedTrigger):
-    def __init__(self, app, settings, request=None, *, runner=None):
+    def __init__(self, app, settings, *, runner=None):
         from apscheduler.schedulers.background import BackgroundScheduler
 
         super().__init__()
@@ -12,7 +12,7 @@ class TimedTrigger(ManagedTrigger):
         self.scheduler.add_job(
             runner or execute,
             settings.get("trigger", "interval"),
-            args=[app.snapshot(), str(app.base_dir), app.request(request or settings.get("request"))],
+            args=[app.snapshot(), str(app.base_dir)],
             **settings.get(
                 "trigger_args", {"minutes": 15} if settings.get("trigger", "interval") == "interval" else {}
             ),
@@ -33,8 +33,8 @@ class TimedTrigger(ManagedTrigger):
         return self.stopped.wait(timeout)
 
 
-def timed_trigger(app, settings, request=None):
-    return launch(TimedTrigger(app, settings, request), settings.get("background", False))
+def timed_trigger(app, settings):
+    return launch(TimedTrigger(app, settings), settings.get("background", False))
 
 
 timed_trigger.settings_schema = {
@@ -46,7 +46,6 @@ timed_trigger.settings_schema = {
         "job": {"type": "object", "description": "Raw add_job options, excluding func, args and trigger."},
         "start": {"type": "object", "description": "Raw scheduler.start arguments, including paused."},
         "background": {"type": "boolean", "default": False},
-        "request": {"type": "object"},
     },
     "additionalProperties": False,
 }

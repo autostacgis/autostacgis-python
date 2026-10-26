@@ -1,52 +1,41 @@
-catalog:
-  version: 0.0.1
-  plugins:
-  - use: stac-resolver
-  - use: extract_footprints
-  - use: clean_footprints
-  - use: markov_seamlines
-  - use: mask_by_polygons
-  - use: mosaic
-    execution:
-      outputs:
-        result:
-          save: true
-          encode:
-            plugin: geotiff
-          data_out:
-            plugin: filesystem
-          metadata_out:
-            plugin: stac-json
-  - use: executor
-  - use: events
-  - use: geotiff
-  - use: stac-json
-request:
-  sources:
-  - stac-resolver
-  goal:
-    all_of:
-    - output:
-        name: result
-        kind: raster
-        require:
-          assets.$asset.data_state:mosaic: true
-          assets.$asset.cf:standard_name: surface_bidirectional_reflectance
-          assets.$asset.unit: '1'
-        coverage:
-          geometry:
-            type: Polygon
-            coordinates:
-            - - - -155.0
-                - 19.0
-              - - -155.0
-                - 20.0
-              - - -156.0
-                - 20.0
-              - - -156.0
-                - 19.0
-              - - -155.0
-                - 19.0
-          mode: footprint
-    - output:
-        name: result
+solver:
+  backward_chain: {}
+goal:
+  metadata-value:
+    name: result
+    kind: raster
+    jsonata: asset.`data_state:mosaic` = true and asset.`cf:standard_name` = "surface_bidirectional_reflectance"
+      and asset.unit = "1"
+    value: true
+    coverage:
+      geometry:
+        type: Polygon
+        coordinates:
+        - - - -156
+            - 19
+          - - -155
+            - 19
+          - - -155
+            - 20
+          - - -156
+            - 20
+          - - -156
+            - 19
+      mode: footprint
+metadata_in:
+  stac-resolver: {}
+process:
+  extract_footprints: {}
+  clean_footprints: {}
+  markov_seamlines: {}
+  mask_by_polygons: {}
+  mosaic:
+    outputs:
+      result:
+        save: false
+        encode:
+          plugin: geotiff
+        data_out:
+          plugin: filesystem
+        metadata_out:
+          plugin: stac-json

@@ -59,8 +59,6 @@ class Registry:
         if name not in self.plugins:
             if name in self.entries:
                 provider = self.entries[name].load()
-            elif name.startswith("autostacgis_plugins."):
-                provider = import_module(name)
             else:
                 from autostacgis_plugins import builtin_names
 

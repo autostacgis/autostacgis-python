@@ -14,16 +14,15 @@ LOG = logging.getLogger(__name__)
 
 
 class FileTrigger(ManagedTrigger):
-    def __init__(self, app, settings, request=None, *, runner=None):
+    def __init__(self, app, settings, *, runner=None):
         from watchdog.events import PatternMatchingEventHandler
         from watchdog.observers import Observer
         from watchdog.observers.polling import PollingObserver
 
         super().__init__()
-        self.catalog, self.base_dir = app.snapshot(), str(app.base_dir)
-        self.request = app.request(request or settings.get("request"))
-        self.request_path = settings.get("request_path", "query.trigger_event")
-        self.files_path = settings.get("files_path", "query.files")
+        self.configuration, self.base_dir = app.snapshot(), str(app.base_dir)
+        self.event_path = settings.get("event_path", "execution.query.trigger_event")
+        self.files_path = settings.get("files_path", "execution.query.files")
         self.runner = runner or execute
         self.events = settings.get("events", ["created", "moved", "closed"])
         self.debounce = settings.get("debounce_seconds", 1.0)
@@ -69,13 +68,13 @@ class FileTrigger(ManagedTrigger):
                     self.condition.wait(delay)
                     continue
                 del self.pending[key]
-            request = deepcopy(self.request)
-            if self.request_path:
-                assign(request, self.request_path, event)
+            configuration = deepcopy(self.configuration)
+            if self.event_path:
+                assign(configuration, self.event_path, event)
             if self.files_path:
-                assign(request, self.files_path, [event["dest_path"] or event["src_path"]])
+                assign(configuration, self.files_path, [event["dest_path"] or event["src_path"]])
             try:
-                self.runner(self.catalog, self.base_dir, request)
+                self.runner(configuration, self.base_dir)
             except Exception as exc:
                 self.last_error = exc
                 LOG.exception("File-triggered workflow failed for %s", key)
@@ -99,8 +98,8 @@ class FileTrigger(ManagedTrigger):
             self.worker.join(timeout)
 
 
-def file_trigger(app, settings, request=None):
-    return launch(FileTrigger(app, settings, request), settings.get("background", False))
+def file_trigger(app, settings):
+    return launch(FileTrigger(app, settings), settings.get("background", False))
 
 
 file_trigger.settings_schema = {
@@ -126,10 +125,9 @@ file_trigger.settings_schema = {
             },
         },
         "debounce_seconds": {"type": "number", "minimum": 0, "default": 1},
-        "request_path": {"type": ["string", "null"], "default": "query.trigger_event"},
-        "files_path": {"type": ["string", "null"], "default": "query.files"},
+        "event_path": {"type": ["string", "null"], "default": "execution.query.trigger_event"},
+        "files_path": {"type": ["string", "null"], "default": "execution.query.files"},
         "background": {"type": "boolean", "default": False},
-        "request": {"type": "object"},
     },
     "required": ["watches"],
     "additionalProperties": False,

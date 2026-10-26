@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from helpers import require_extra, scene, subset
+from helpers import configured, require_extra, scene, subset
 
 from autostacgis import Application
 from autostacgis.data import ArrayRaster, Grid
@@ -40,18 +40,18 @@ def test_namespace_loads_only_selected_entrypoints(monkeypatch):
             SimpleNamespace(name="unused", load=unused),
         ],
     )
-    app = Application({"version": "0.0.1", "plugins": [{"use": "custom"}]})
-    assert set(app.plugins) == {"custom", "backward_chain", "buffered-transfer"} and loaded == ["selected"]
+    app = Application({"solver": {"backward_chain": {}}, "goal": {"custom": {}}})
+    assert {"custom", "backward_chain", "buffered-transfer"} <= set(app.plugins) and loaded == ["selected"]
 
 
-def test_namespace_can_configure_dependency_by_qualified_module(tmp_path):
+def test_namespace_configures_dependencies_by_unique_plugin_name(tmp_path):
     app = Application(
         {
-            "version": "0.0.1",
-            "plugins": [
-                {"use": "pansharpen"},
-                {"use": "autostacgis_plugins.storage", "settings": {"tile_size": 256}},
-            ],
+            "solver": {"backward_chain": {}},
+            "goal": {"metadata-value": {"jsonata": "true", "value": True}},
+            "process": {"pansharpen": {}},
+            "services": {"storage": {"tile_size": 256}},
+            "metadata_structure": {"strict": False},
         }
     )
     assert "pansharpen" in app.plugins
@@ -67,7 +67,8 @@ def test_competing_algorithms_require_explicit_selection():
         subset("weighted_seamlines", "markov_seamlines", "extract_footprints", "clean_footprints")
     )
     with pytest.raises(AmbiguousProducer, match="only one plugin"):
-        app.plan(
+        configured(
+            app,
             {
                 "goal": {
                     "output": {
@@ -76,8 +77,7 @@ def test_competing_algorithms_require_explicit_selection():
                     }
                 }
             },
-            [scene()],
-        )
+        ).plan(inputs=[scene()])
 
 
 def test_dem_mean_ignores_invalid_pixels_and_supplies_py6s(context, monkeypatch):
@@ -156,7 +156,7 @@ def test_geotiff_embeds_stac_and_maps_native_band_metadata(tmp_path):
 def test_masking_lowers_registration_and_normalization_costs(name, port):
     from autostacgis.contracts import cost_of
 
-    contract = Application().modules({"modules": [name]})[name]
+    contract = Application(subset(name)).modules({"modules": [name]})[name]
     raw, masked = scene(), scene()
     masked.item["assets"]["data"]["data_state:masked"].update(cloud=True, cloud_shadow=True)
     assert cost_of(contract, {port: [masked]}, {}) < cost_of(contract, {port: [raw]}, {})
@@ -189,10 +189,11 @@ def test_planned_dem_summary_is_consumed_by_py6s(tmp_path, monkeypatch):
     monkeypatch.setattr(correction, "coefficients", coefficients)
     app = Application(
         {
-            "version": "0.0.1",
-            "plugins": [
-                {"use": name} for name in ("atmospheric_correction", "sample_dem", "executor", "events")
-            ],
+            "solver": {"backward_chain": {}},
+            "goal": {"metadata-value": {"jsonata": "true", "value": True}},
+            "process": {"atmospheric_correction": {}, "sample_dem": {}},
+            "services": {"executor": {}, "events": {}},
+            "metadata_structure": {"strict": False},
         },
         base_dir=tmp_path,
     )
@@ -208,9 +209,9 @@ def test_planned_dem_summary_is_consumed_by_py6s(tmp_path, monkeypatch):
             }
         },
     }
-    plan = app.plan(request, [image, dem, atmosphere])
+    plan = configured(app, request).plan(inputs=[image, dem, atmosphere])
     assert [s.module for s in plan.steps] == ["sample_dem", "atmospheric_correction"]
-    with app.run(request, [image, dem, atmosphere]) as result:
+    with configured(app, request).run(inputs=[image, dem, atmosphere]) as result:
         assert result.records[0].item["assets"]["data"]["data_state:atmospheric_correction"] == "full"
         block = result.records[0].payload.read(next(result.records[0].payload.windows()))
         np.testing.assert_allclose(block.pixels, 0.2)
@@ -234,21 +235,19 @@ def test_automatically_planned_normalization_to_markov_mosaic_executes(tmp_path)
         refresh_metadata(image)
     app = Application(
         {
-            "version": "0.0.1",
-            "plugins": [
-                {"use": name}
-                for name in [
-                    "global_radiometric_match",
-                    "local_radiometric_match",
-                    "extract_footprints",
-                    "clean_footprints",
-                    "markov_seamlines",
-                    "mask_by_polygons",
-                    "mosaic",
-                    "executor",
-                    "events",
-                ]
-            ],
+            "solver": {"backward_chain": {}},
+            "goal": {"metadata-value": {"jsonata": "true", "value": True}},
+            "process": {
+                "global_radiometric_match": {},
+                "local_radiometric_match": {},
+                "extract_footprints": {},
+                "clean_footprints": {},
+                "markov_seamlines": {},
+                "mask_by_polygons": {},
+                "mosaic": {},
+            },
+            "services": {"executor": {}, "events": {}},
+            "metadata_structure": {"strict": False},
         },
         base_dir=tmp_path,
     )
@@ -278,14 +277,14 @@ def test_automatically_planned_normalization_to_markov_mosaic_executes(tmp_path)
             },
         },
     }
-    plan = app.plan(request, images)
+    plan = configured(app, request).plan(inputs=images)
     modules = [s.module for s in plan.steps]
     assert (
         modules.index("global_radiometric_match")
         < modules.index("local_radiometric_match")
         < modules.index("mask_by_polygons")
     )
-    with app.run(request, images) as result:
+    with configured(app, request).run(inputs=images) as result:
         record = result.records[0]
         block = record.payload.read(Window(0, 0, 84, 64))
         assert block.valid.any() and np.isfinite(block.pixels[block.valid]).all()

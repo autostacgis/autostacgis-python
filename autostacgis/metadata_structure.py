@@ -20,14 +20,7 @@ class MetadataStructure:
 
     def __init__(self, configuration, stac):
         self.configuration = deepcopy(configuration or {})
-        if "schemas" in self.configuration:
-            from .stac import current_schema
-
-            self.configuration["schemas"] = list(
-                dict.fromkeys(current_schema(uri) for uri in self.configuration["schemas"])
-            )
         self.stac = stac
-        self.enabled = configuration is not None
         validators.validator_for(self.configuration.get("inline", {})).check_schema(
             self.configuration.get("inline", {})
         )
@@ -110,9 +103,9 @@ class MetadataStructure:
         return result
 
     def validate(self, item):
-        if not self.enabled:
-            return item
         schemas = self.schemas(item.get("stac_version", "1.1.0"))
+        configured = set(self.configuration.get("schemas", []))
+        schemas.extend({"$ref": uri} for uri in item.get("stac_extensions", []) if uri not in configured)
         registry = Registry(retrieve=self.stac.retrieve).with_resources(
             (uri, Resource.from_contents(schema)) for uri, schema in self.stac.schemas.items()
         )

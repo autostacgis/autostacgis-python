@@ -3,10 +3,10 @@
 from threading import Event
 
 
-def execute(catalog, base_dir, request):
+def execute(configuration, base_dir):
     from autostacgis import Application
 
-    result = Application(catalog, base_dir=base_dir).run(request)
+    result = Application(configuration, base_dir=base_dir).run()
     if hasattr(result, "close"):
         result.close()
 

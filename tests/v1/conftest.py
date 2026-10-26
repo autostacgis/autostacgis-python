@@ -14,9 +14,11 @@ def context(tmp_path):
         "events": {"implementation": "events", "settings": {}},
     }
     with Services(Registry(), definitions, directory=tmp_path) as services:
-        yield Context(
+        context = Context(
             services,
             tmp_path / "step",
             {"result": [scene()], "results": [scene("one"), scene("two")]},
             "native",
         )
+        context.structure_definition = {"strict": False}
+        yield context

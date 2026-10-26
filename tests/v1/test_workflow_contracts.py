@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from autostacgis_plugins.common_crs import common_crs
 from autostacgis_plugins.register_to_reference import register_to_reference
-from helpers import require_extra, scene, subset
+from helpers import configured, require_extra, scene, subset
 from shapely.geometry import box
 
 from autostacgis import Application, Record
@@ -81,7 +81,8 @@ def test_pansharpen_requires_affine_grids_but_not_projected_crs():
     app = Application(subset("pansharpen"))
     assert (
         len(
-            app.plan(
+            configured(
+                app,
                 {
                     "version": "0.0.1",
                     "goal": {
@@ -94,15 +95,17 @@ def test_pansharpen_requires_affine_grids_but_not_projected_crs():
                         }
                     },
                 },
-                [ms, pan],
-            ).steps
+            )
+            .plan(inputs=[ms, pan])
+            .steps
         )
         == 1
     )
     for record in [ms, pan]:
         record.item["assets"]["data"]["data_state:georeferencing"] = "rpc"
     with pytest.raises(NoPlan):
-        app.plan(
+        configured(
+            app,
             {
                 "version": "0.0.1",
                 "goal": {
@@ -115,8 +118,7 @@ def test_pansharpen_requires_affine_grids_but_not_projected_crs():
                     }
                 },
             },
-            [ms, pan],
-        )
+        ).plan(inputs=[ms, pan])
 
 
 def test_surface_reflectance_pan_radiance_normalization(context):

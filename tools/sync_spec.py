@@ -33,7 +33,7 @@ for path in artifacts:
 for path in (root / "autostacgis/spec").rglob("*.json"):
     if str(path.relative_to(root / "autostacgis/spec")) not in files:
         path.unlink()
-version = json.loads((source / "schemas/catalog.json").read_text())["properties"]["version"]["const"]
+version = json.loads((source / "schemas/config.json").read_text())["$id"].split("/v")[-1].split("/")[0]
 (root / "spec.lock.json").write_text(
     json.dumps(
         {

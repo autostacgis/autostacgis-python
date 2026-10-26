@@ -1,7 +1,6 @@
 import numpy as np
 
 from autostacgis import Record
-from autostacgis.builtins import catalog
 from autostacgis.data import ArrayRaster, Grid
 from autostacgis.semantics import descriptor
 
@@ -37,22 +36,74 @@ def scene(identifier="ms", content="multispectral_imagery", *, value=10, count=3
     return Record(item, payload=ArrayRaster(np.full(grid.shape, value, dtype="float32"), grid))
 
 
-def capabilities(config, name):
-    return [p["capabilities"][name] for p in config["plugins"] if name in p["capabilities"]]
-
-
 def subset(*names):
-    config = catalog()
-    by_id = {p["id"]: p for p in config["plugins"]}
-    wanted = {p["id"] for p in config["plugins"] if "process" not in p["capabilities"]} | set(names)
-    while True:
-        dependencies = {d for name in wanted for d in by_id[name].get("requires", [])}
-        if dependencies <= wanted:
-            break
-        wanted |= dependencies
-    config["plugins"] = [p for p in config["plugins"] if p["id"] in wanted]
-    config["runtime"]["executor"]["settings"]["workers"] = 2
-    return config
+    from autostacgis_plugins import modules
+
+    groups = {}
+    for provider in modules():
+        if provider.CAPABILITY in ("goal", "solver", "trigger", "process"):
+            continue
+        groups.setdefault(provider.CAPABILITY, {})[provider.ID] = {}
+    groups.update(
+        solver={"backward_chain": {}},
+        goal={"metadata-value": {"jsonata": "true", "value": True}},
+        process={name: {} for name in names},
+        execution={"sources": []},
+        metadata_structure={"strict": False},
+    )
+    groups["services"]["executor"] = {"workers": 2}
+    return groups
+
+
+def configured(app, parameters):
+    """Build a grouped workflow for a solver's unit-test execution parameters."""
+    from copy import deepcopy
+
+    from autostacgis import Application
+
+    document = app.snapshot()
+    parameters = deepcopy(parameters)
+    parameters.pop("version", None)
+    goal = parameters.pop("goal")
+    if "plugin" in goal:
+        document["goal"] = {goal["plugin"]: goal.get("settings", {})}
+    else:
+        test_goal = SolverGoal(app.solver_name, app.solver_implementation.contract["goal_schema"])
+        if "test-goal" not in app.registry.plugins:
+            app.registry.register("test-goal", "goal", test_goal, requires=(app.solver_name,))
+        document["goal"] = {"test-goal": {"value": goal}}
+    if "modules" in parameters:
+        if "steps" not in parameters:
+            document.setdefault("execution", {}).pop("steps", None)
+        document["process"] = {
+            name: document.get("process", {}).get(name, {}) for name in parameters["modules"]
+        }
+    for name, settings in parameters.pop("module_settings", {}).items():
+        document.setdefault("process", {}).setdefault(name, {}).update(settings)
+    for name, definition in parameters.pop("runtime", {}).items():
+        settings = deepcopy(definition.get("settings", {}))
+        if definition.get("implementation", name) != name:
+            settings["backend"] = definition["implementation"]
+        document.setdefault("services", {})[name] = settings
+    if "solver" in parameters:
+        call = parameters.pop("solver")
+        document["solver"] = {call["plugin"]: call.get("settings", {})}
+    document.setdefault("execution", {}).update(parameters)
+    return Application(document, registry=app.registry, base_dir=app.base_dir, events=app.events)
+
+
+def add_plugins(document, definitions):
+    """Select registrations and their parameters in a workflow fixture."""
+    from copy import deepcopy
+
+    for definition in definitions:
+        for capability, entry in definition["capabilities"].items():
+            assert entry["implementation"] == definition["id"]
+            options = deepcopy(entry.get("settings", {}))
+            if entry.get("execution"):
+                options.update(entry["execution"])
+            document.setdefault(capability, {})[definition["id"]] = options
+    return document
 
 
 def require_extra(module, distribution=None):
@@ -66,3 +117,22 @@ def require_extra(module, distribution=None):
     except PackageNotFoundError:
         pytest.skip(f"Optional integration requires {distribution or module}")
     return pytest.importorskip(module)
+
+
+class SolverGoal:
+    """Serializable goal fixture exposing a solver's native contract."""
+
+    def __init__(self, solver, schema):
+        self.contract = {
+            "solver": solver,
+            "settings_schema": {
+                "type": "object",
+                "$defs": schema.get("$defs", {}),
+                "properties": {"value": schema},
+                "required": ["value"],
+                "additionalProperties": False,
+            },
+        }
+
+    def __call__(self, settings, records, context):
+        return settings["value"]

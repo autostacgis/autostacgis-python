@@ -1,4 +1,4 @@
-"""Export small, self-contained Python workflow examples."""
+"""Export the current capability-grouped workflow examples."""
 
 from pathlib import Path
 
@@ -8,32 +8,7 @@ import yaml
 def export(directory):
     directory = Path(directory)
 
-    def write_example(name, plugins, goal, **overrides):
-        folder = directory / name
-        folder.mkdir(parents=True, exist_ok=True)
-        config = {
-            "catalog": {
-                "version": "0.0.1",
-                "plugins": [
-                    {"use": p}
-                    for p in ["stac-resolver", *plugins, "executor", "events", "geotiff", "stac-json"]
-                ],
-            },
-            "request": {
-                "sources": ["stac-resolver"],
-                "goal": goal,
-                **overrides,
-            },
-        }
-        if name == "pansharpen":
-            config["catalog"]["plugins"][-2] = {"use": "zarr"}
-
-        saving = {
-            "save": True,
-            "encode": {"plugin": "zarr" if name == "pansharpen" else "geotiff"},
-            "data_out": {"plugin": "filesystem"},
-            "metadata_out": {"plugin": "stac-json"},
-        }
+    def write_example(name, processes, parameters, **execution):
         producer = (
             "mosaic"
             if name == "mosaic"
@@ -41,32 +16,52 @@ def export(directory):
             if name == "pansharpen"
             else "global_radiometric_match"
         )
-        entry = next(p for p in config["catalog"]["plugins"] if p["use"] == producer)
-        entry["execution"] = {"outputs": {"result": saving}}
-        (folder / "config.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
-        for legacy in ("catalog.yaml", "request.yaml", "catalog.json", "request.json", "config.json"):
-            (folder / legacy).unlink(missing_ok=True)
-
-    def per_image(requirements):
-        return {
-            "for_each": {
-                "kind": "raster",
-                "select": {"assets.$asset.data_state:spectral_sampling": "multispectral"},
-                "require": requirements,
+        document = {
+            "solver": {"backward_chain": {}},
+            "goal": {"metadata-value": parameters},
+            "metadata_in": {"stac-resolver": {}},
+            "process": {plugin: {} for plugin in processes},
+        }
+        port = "results" if producer == "global_radiometric_match" else "result"
+        document["process"][producer]["outputs"] = {
+            port: {
+                "save": False,
+                "encode": {"plugin": "zarr" if name == "pansharpen" else "geotiff"},
+                "data_out": {"plugin": "filesystem"},
+                "metadata_out": {"plugin": "stac-json"},
             }
         }
+        if execution:
+            document["execution"] = execution
+        folder = directory / name
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "config.yaml").write_text(yaml.safe_dump(document, sort_keys=False, width=100))
 
-    write_example("pansharpen", ["pansharpen"], per_image({"assets.$asset.data_state:pansharpened": True}))
-    normalization = ["pansharpen", "global_radiometric_match"]
+    selection = {"kind": "raster", "require": {"assets.$asset.data_state:spectral_sampling": "multispectral"}}
+    write_example(
+        "pansharpen",
+        ["pansharpen"],
+        {
+            "kind": "raster",
+            "for_each": True,
+            "select": selection,
+            "path": "assets.$asset.data_state:pansharpened",
+            "value": True,
+        },
+    )
     normalized = {
-        "assets.$asset.data_state:relative_radiometric_normalization": True,
-        "assets.$asset.data_state:pansharpened": True,
+        "kind": "raster",
+        "for_each": True,
+        "select": selection,
+        "jsonata": "asset.`data_state:relative_radiometric_normalization` = true and asset.`data_state:pansharpened` = true",
+        "value": True,
     }
-    write_example("normalization", normalization, per_image(normalized))
+    processes = ["pansharpen", "global_radiometric_match"]
+    write_example("normalization", processes, normalized)
     write_example(
         "grouped-normalization",
-        [*normalization, "group-by"],
-        per_image(normalized),
+        processes,
+        normalized,
         sequence={
             "global_radiometric_match.images": {
                 "plugin": "group-by",
@@ -74,31 +69,21 @@ def export(directory):
             }
         },
     )
-    import json
-
-    from shapely.geometry import box, mapping
-
     write_example(
         "mosaic",
         ["extract_footprints", "clean_footprints", "markov_seamlines", "mask_by_polygons", "mosaic"],
         {
-            "all_of": [
-                {
-                    "output": {
-                        "name": "result",
-                        "kind": "raster",
-                        "require": {
-                            "assets.$asset.data_state:mosaic": True,
-                            "assets.$asset.cf:standard_name": "surface_bidirectional_reflectance",
-                            "assets.$asset.unit": "1",
-                        },
-                        "coverage": {
-                            "geometry": json.loads(json.dumps(mapping(box(-156, 19, -155, 20)))),
-                            "mode": "footprint",
-                        },
-                    }
-                }
-            ]
+            "name": "result",
+            "kind": "raster",
+            "jsonata": 'asset.`data_state:mosaic` = true and asset.`cf:standard_name` = "surface_bidirectional_reflectance" and asset.unit = "1"',
+            "value": True,
+            "coverage": {
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[[-156, 19], [-155, 19], [-155, 20], [-156, 20], [-156, 19]]],
+                },
+                "mode": "footprint",
+            },
         },
     )
 

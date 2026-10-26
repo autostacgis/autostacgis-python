@@ -3,7 +3,7 @@ import pytest
 from autostacgis_plugins.multiprocessing import Processes
 from autostacgis_plugins.sequential import Sequential
 from autostacgis_plugins.threads import Threads as Executor
-from helpers import capabilities, scene, subset
+from helpers import add_plugins, configured, scene, subset
 
 from autostacgis import Application, Registry
 from autostacgis.data import ArrayRaster, FileRaster, Window, ZarrRaster
@@ -64,7 +64,8 @@ def read_sum(raster):
 def test_native_processing_and_stac_validation(tmp_path):
     config = subset("pansharpen")
     app = Application(config, base_dir=tmp_path)
-    with app.run(
+    with configured(
+        app,
         {
             "version": "0.0.1",
             "goal": {
@@ -75,8 +76,7 @@ def test_native_processing_and_stac_validation(tmp_path):
                 }
             },
         },
-        [scene(), scene("pan", "panchromatic_imagery", value=20, count=1)],
-    ) as result:
+    ).run(inputs=[scene(), scene("pan", "panchromatic_imagery", value=20, count=1)]) as result:
         assert len(result.records) == 1
         record = result.records[0]
         np.testing.assert_allclose(record.payload.read(Window(0, 0, 4, 4)).pixels, 10)
@@ -91,9 +91,10 @@ def test_discovery_never_executes(tmp_path):
     )
     registry.resolve("process", "must-not-run").contract = registry.resolve("process", "pansharpen").contract
     config = subset("pansharpen")
-    capabilities(config, "process")[0]["implementation"] = "must-not-run"
+    registry.plugins["pansharpen"]["process"] = registry.resolve("process", "must-not-run")
     app = Application(config, base_dir=tmp_path, registry=registry)
-    plan = app.run(
+    plan = configured(
+        app,
         {
             "version": "0.0.1",
             "goal": {
@@ -105,8 +106,7 @@ def test_discovery_never_executes(tmp_path):
             },
             "discovery": True,
         },
-        [scene(), scene("pan", "panchromatic_imagery", count=1)],
-    )
+    ).run(inputs=[scene(), scene("pan", "panchromatic_imagery", count=1)])
     assert len(plan.steps) == 1
     assert not (tmp_path / "work").exists()
 
@@ -118,9 +118,10 @@ def test_false_success_is_rejected(tmp_path):
     )
     registry.resolve("process", "bad").contract = registry.resolve("process", "pansharpen").contract
     config = subset("pansharpen")
-    capabilities(config, "process")[0]["implementation"] = "bad"
+    registry.plugins["pansharpen"]["process"] = registry.resolve("process", "bad")
     with pytest.raises(AutoSTACGISError, match="violates promised"):
-        Application(config, base_dir=tmp_path, registry=registry).run(
+        configured(
+            Application(config, base_dir=tmp_path, registry=registry),
             {
                 "version": "0.0.1",
                 "goal": {
@@ -133,13 +134,12 @@ def test_false_success_is_rejected(tmp_path):
                     }
                 },
             },
-            [scene(), scene("pan", "panchromatic_imagery", count=1)],
-        )
+        ).run(inputs=[scene(), scene("pan", "panchromatic_imagery", count=1)])
 
 
 def test_zarr_concurrent_chunks_and_stac_delivery(tmp_path):
     config = subset("pansharpen")
-    next(p for p in config["plugins"] if p["id"] == "pansharpen")["capabilities"]["process"]["execution"] = {
+    config["process"]["pansharpen"] = {
         "outputs": {
             "result": {
                 "save": True,
@@ -160,7 +160,9 @@ def test_zarr_concurrent_chunks_and_stac_delivery(tmp_path):
             }
         },
     }
-    with app.run(request, [scene(), scene("pan", "panchromatic_imagery", value=20, count=1)]) as result:
+    with configured(app, request).run(
+        inputs=[scene(), scene("pan", "panchromatic_imagery", value=20, count=1)]
+    ) as result:
         import zarr
 
         record = result.records[0]
@@ -185,9 +187,10 @@ def test_raster_mask_roundtrip(tmp_path):
 
 def test_multiprocessing_executes_native_pipeline(tmp_path):
     config = subset("pansharpen")
-    config["runtime"]["executor"] = {"implementation": "multiprocessing", "settings": {"workers": 2}}
+    config["services"]["executor"] = {**{"workers": 2}, "backend": "multiprocessing"}
     app = Application(config, base_dir=tmp_path)
-    with app.run(
+    with configured(
+        app,
         {
             "version": "0.0.1",
             "goal": {
@@ -198,8 +201,7 @@ def test_multiprocessing_executes_native_pipeline(tmp_path):
                 }
             },
         },
-        [scene(), scene("pan", "panchromatic_imagery", count=1, value=20)],
-    ) as result:
+    ).run(inputs=[scene(), scene("pan", "panchromatic_imagery", count=1, value=20)]) as result:
         np.testing.assert_allclose(result.records[0].payload.read(Window(0, 0, 4, 4)).pixels, 10)
 
 
@@ -230,10 +232,7 @@ def test_dask_executor_uses_existing_cluster(tmp_path):
 
 def test_process_executor_integrates_transfer_and_checkpoint(tmp_path):
     config = subset("pansharpen")
-    config["runtime"]["executor"] = {
-        "implementation": "executor",
-        "settings": {"backend": "multiprocessing", "workers": 2},
-    }
+    config["services"]["executor"] = {"backend": "multiprocessing", "workers": 2}
     app = Application(config, base_dir=tmp_path)
     request = {
         "goal": {
@@ -246,7 +245,9 @@ def test_process_executor_integrates_transfer_and_checkpoint(tmp_path):
         "checkpoint": {"plugin": "file-checkpoint"},
     }
     for _ in range(2):
-        with app.run(request, [scene(), scene("pan", "panchromatic_imagery", value=20, count=1)]) as result:
+        with configured(app, request).run(
+            inputs=[scene(), scene("pan", "panchromatic_imagery", value=20, count=1)]
+        ) as result:
             np.testing.assert_allclose(result.records[0].payload.read(Window(0, 0, 4, 4)).pixels, 10)
             assert result.records[0].runtime["checkpoint"].endswith("manifest.json")
 
@@ -288,11 +289,8 @@ def test_worker_byte_stream_is_transferred_before_serialization(tmp_path):
             "result": {"save": True, "data_out": {"plugin": "filesystem", "settings": {"path": "stream.bin"}}}
         }
     }
-    config["plugins"].append(definition)
-    config["runtime"]["executor"] = {
-        "implementation": "executor",
-        "settings": {"backend": "multiprocessing", "workers": 2},
-    }
+    add_plugins(config, [definition])
+    config["services"]["executor"] = {"backend": "multiprocessing", "workers": 2}
     app = Application(config, base_dir=tmp_path, registry=registry)
     request = {
         "goal": {
@@ -302,5 +300,5 @@ def test_worker_byte_stream_is_transferred_before_serialization(tmp_path):
             }
         }
     }
-    with app.run(request, [scene()]):
+    with configured(app, request).run(inputs=[scene()]):
         assert (tmp_path / "stream.bin").read_bytes() == b"worker stream"

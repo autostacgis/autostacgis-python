@@ -1,102 +1,84 @@
-catalog:
-  version: 0.0.1
-  plugins:
-  - use: eoreader
-    settings:
-      search_glob: /path/to/worldview/**/*.TIL
-  - use: stac-source
-    settings:
-      items:
-      - /path/to/dem.stac.json
-      - /path/to/reference.stac.json
-  - use: atmosphere
-  - use: sample_dem
-  - use: atmospheric_correction
-  - use: orthorectify_rpc
-    settings:
-      crs: EPSG:8857
-      resampling: bilinear
-  - use: pansharpen
-  - use: detect_clouds
-  - use: apply_mask
-  - use: register_to_reference
-    settings:
-      clip_fixed_to_moving: true
-      output_on_moving_grid: true
-      trim_edge_invalid: true
-      edge_trim_depth: 8
-      edge_trim_invalid_below: -3000
-      enforce_mutual_valid_mask: true
-  - use: joint_coregistration
-  - use: global_radiometric_match
-  - use: local_radiometric_match
-  - use: extract_footprints
-  - use: clean_footprints
-    settings:
-      hole_edge_distance: 800
-      hole_to_hole_distance: 800
-      simplify_smoothing_radius: 240
-      simplify_tolerance: 120
-      simplify_area_weight: 0.5
-      filter_area_rank: 1
-  - use: markov_seamlines
-  - use: mask_by_polygons
-  - use: mosaic
-    execution:
-      outputs:
-        result:
-          save: true
-          encode:
-            plugin: geotiff
-          data_out:
-            plugin: filesystem
-          metadata_out:
-            plugin: stac-json
-  - use: executor
-    settings:
-      backend: threads
-      workers: 4
-  - use: storage
-    settings:
-      memory_bytes: 536870912
-      tile_size: 1024
-  - use: events
-  - use: geotiff
-    settings: {}
-  - use: stac-json
-    settings:
-      directory: output/stac
-  - use: filesystem
-    settings:
-      directory: output/data
-request:
-  version: 0.0.1
+solver:
+  backward_chain: {}
+goal:
+  metadata-value:
+    kind: raster
+    select:
+      require:
+        assets.$asset.data_state:spectral_sampling: multispectral
+    jsonata: ((asset.`cf:standard_name` = "surface_bidirectional_reflectance" and asset.`unit` = "1" and
+      asset.`data_state:orthorectified` = true and asset.`data_state:pansharpened` = true and asset.`data_state:relative_radiometric_normalization`
+      = true and asset.`data_state:local_radiometric_adjustment` = true and asset.`data_state:masked`.`cloud`
+      = true and asset.`data_state:masked`.`cloud_shadow` = true and asset.`data_state:masked`.`mosaic_seamline`
+      = true and asset.`data_state:mosaic` = true) and $count(asset.`data_state:registration`[`kind` =
+      "reference"]) > 0 and $count(asset.`data_state:registration`[`kind` = "joint"]) > 0 and true)
+    value: true
+metadata_in:
+  eoreader:
+    search_glob: /path/to/worldview/**/*.TIL
+  stac-source:
+    items:
+    - /path/to/dem.stac.json
+    - /path/to/reference.stac.json
+  atmosphere: {}
+process:
+  sample_dem: {}
+  atmospheric_correction: {}
+  orthorectify_rpc:
+    crs: EPSG:8857
+    resampling: bilinear
+  pansharpen: {}
+  detect_clouds: {}
+  apply_mask: {}
+  register_to_reference:
+    clip_fixed_to_moving: true
+    output_on_moving_grid: true
+    trim_edge_invalid: true
+    edge_trim_depth: 8
+    edge_trim_invalid_below: -3000
+    enforce_mutual_valid_mask: true
+  joint_coregistration: {}
+  global_radiometric_match: {}
+  local_radiometric_match: {}
+  extract_footprints: {}
+  clean_footprints:
+    hole_edge_distance: 800
+    hole_to_hole_distance: 800
+    simplify_smoothing_radius: 240
+    simplify_tolerance: 120
+    simplify_area_weight: 0.5
+    filter_area_rank: 1
+  markov_seamlines: {}
+  mask_by_polygons: {}
+  mosaic:
+    outputs:
+      result:
+        save: false
+        encode:
+          plugin: geotiff
+        data_out:
+          plugin: filesystem
+        metadata_out:
+          plugin: stac-json
+services:
+  executor:
+    backend: threads
+    workers: 4
+  storage:
+    memory_bytes: 536870912
+    tile_size: 1024
+  events: {}
+encode:
+  geotiff: {}
+metadata_out:
+  stac-json:
+    directory: output/stac
+data_out:
+  filesystem:
+    directory: output/data
+execution:
   sources:
   - eoreader
   - stac-source
   - atmosphere
-  goal:
-    output:
-      kind: raster
-      select:
-        assets.$asset.data_state:spectral_sampling: multispectral
-      require:
-        all:
-        - assets.$asset.cf:standard_name: surface_bidirectional_reflectance
-          assets.$asset.unit: '1'
-          assets.$asset.data_state:orthorectified: true
-          assets.$asset.data_state:pansharpened: true
-          assets.$asset.data_state:relative_radiometric_normalization: true
-          assets.$asset.data_state:local_radiometric_adjustment: true
-          assets.$asset.data_state:masked.cloud: true
-          assets.$asset.data_state:masked.cloud_shadow: true
-          assets.$asset.data_state:masked.mosaic_seamline: true
-          assets.$asset.data_state:mosaic: true
-        - path: assets.$asset.data_state:registration
-          entry:
-            kind: reference
-        - path: assets.$asset.data_state:registration
-          entry:
-            kind: joint
-        - {}
   work_directory: work/worldview

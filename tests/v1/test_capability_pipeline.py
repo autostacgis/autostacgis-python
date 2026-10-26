@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from autostacgis_plugins.buffered_transfer import BufferedTransfer
 from autostacgis_plugins.file_checkpoint import FileCheckpoint
-from helpers import scene, subset
+from helpers import add_plugins, configured, scene, subset
 
 from autostacgis import Application, Registry
 from autostacgis.artifacts import Artifact, artifact
@@ -22,11 +22,11 @@ def app_for(tmp_path, function, *, extra=None):
     registry = Registry()
     registry.register("test-process", "process", function)
     config = subset()
-    config["plugins"].append(
-        {"id": "test-process", "capabilities": {"process": {"implementation": "test-process"}}}
+    add_plugins(
+        config, [{"id": "test-process", "capabilities": {"process": {"implementation": "test-process"}}}]
     )
     if extra:
-        config["plugins"].extend(extra)
+        add_plugins(config, extra)
     return Application(config, registry=registry, base_dir=tmp_path)
 
 
@@ -77,15 +77,15 @@ def test_metadata_discovery_is_separate_from_selected_acquisition(tmp_path):
     registry.register("test-source", "metadata_in", Source, requires=("test-download",))
     registry.register("test-download", "data_in", Download)
     config = subset()
-    config["plugins"].extend(registry.definition(name) for name in ("test-source", "test-download"))
+    add_plugins(config, (registry.definition(name) for name in ("test-source", "test-download")))
     app = Application(config, registry=registry, base_dir=tmp_path)
     req = {"sources": ["test-source"], "query": {"area": [0, 0, 1, 1]}, "goal": {"output": {}}}
-    assert len(app.plan(req).initial) == 1
+    assert len(configured(app, req).plan().initial) == 1
     assert [c[0] for c in calls] == ["discover"]
-    with app.run(req):
+    with configured(app, req).run():
         pass
     assert [c[0] for c in calls] == ["discover", "discover", "acquire"]
-    assert app.discover(req)[0].runtime["data_in"] == "test-download"
+    assert configured(app, req).discover()[0].runtime["data_in"] == "test-download"
     assert set(app.acquirers) >= {"test-download"}
 
 
@@ -137,7 +137,7 @@ def test_split_combine_routes_drive_real_core_bindings(tmp_path):
         "goal": {"for_each": {"require": {"properties.processed": True}}},
         "sequence": {"test-process.images": {"plugin": "split", "settings": {"size": 2}}},
     }
-    with app.run(req, records) as result:
+    with configured(app, req).run(inputs=records) as result:
         assert len(result.records) == 4
         assert len(result.plan.steps) == 2
     assert sorted(calls) == [2, 2]
@@ -180,7 +180,7 @@ def test_byte_stream_processing_publishes_with_filesystem_and_stac(tmp_path):
             }
         }
     )
-    with app.run(req, [scene()]) as result:
+    with configured(app, req).run(inputs=[scene()]) as result:
         assert (tmp_path / "result.bin").read_bytes() == b"hello world"
         item = json.loads((tmp_path / "result.json").read_text())
         assert item["assets"]["data"]["href"] == (tmp_path / "result.bin").as_uri()
@@ -207,7 +207,7 @@ def test_incompatible_publication_rejected_before_processing(tmp_path):
         }
     )
     with pytest.raises(AutoSTACGISError, match="cannot encode"):
-        app.plan(req, [scene()])
+        configured(app, req).plan(inputs=[scene()])
 
 
 @pytest.mark.parametrize("encoder", ["geotiff", "zarr"])
@@ -227,7 +227,7 @@ def test_checkpoint_reuse_content_invalidation_and_corruption(tmp_path, monkeypa
     app = app_for(tmp_path, process)
     req = request(checkpoint={"plugin": "file-checkpoint", "settings": {"encoders": {"raster": encoder}}})
     for _ in range(2):
-        with app.run(req, [scene()]) as result:
+        with configured(app, req).run(inputs=[scene()]) as result:
             assert result.records[0].payload.read(Window(0, 0, 4, 4)).pixels.mean() == 10
     assert len(calls) == 1
     manifests = list((tmp_path / "work/checkpoints").glob("*/manifest.json"))
@@ -236,10 +236,10 @@ def test_checkpoint_reuse_content_invalidation_and_corruption(tmp_path, monkeypa
     stored = Path(saved["path"])
     damaged = next(p for p in stored.rglob("*") if p.is_file()) if stored.is_dir() else stored
     damaged.write_bytes(b"corrupt raster")
-    with app.run(req, [scene()]):
+    with configured(app, req).run(inputs=[scene()]):
         pass
     assert len(calls) == 2
-    with app.run(req, [scene(value=20)]):
+    with configured(app, req).run(inputs=[scene(value=20)]):
         pass
     assert len(calls) == 3
 
@@ -267,8 +267,8 @@ def test_processing_generator_resumes_an_intermediate_checkpoint(tmp_path, monke
     app = app_for(tmp_path, process)
     req = request(checkpoint={"plugin": "file-checkpoint"})
     with pytest.raises(RuntimeError, match="interrupted"):
-        app.run(req, [scene()])
-    with app.run(req, [scene()]) as result:
+        configured(app, req).run(inputs=[scene()])
+    with configured(app, req).run(inputs=[scene()]) as result:
         assert result.records[0].item["properties"]["processed"] is True
     assert len(calls) == 1
 
@@ -291,8 +291,8 @@ def test_checkpoint_locations_and_checks_plugin(tmp_path, monkeypatch):
         return "fail"
 
     app.registry.register("reject-check", "checks", reject)
-    config = app.catalog.copy()
-    config["plugins"] = [*app.catalog["plugins"], app.registry.definition("reject-check")]
+    config = app.snapshot()
+    config["checks"]["reject-check"] = {}
     app = Application(config, registry=app.registry, base_dir=tmp_path)
     provider = FileCheckpoint(
         {"directory": "cache", "encoders": {"raster": "geotiff"}, "checks": [{"plugin": "reject-check"}]},
@@ -356,15 +356,15 @@ def test_configured_transfer_handles_every_step_edge_and_preferences(tmp_path):
     registry.register("audit-transfer", "data_transfer", AuditTransfer)
     registry.register("test-process", "process", process)
     config = subset()
-    config["plugins"].extend([registry.definition("audit-transfer"), registry.definition("test-process")])
+    add_plugins(config, [registry.definition("audit-transfer"), registry.definition("test-process")])
     app = Application(config, registry=registry, base_dir=tmp_path)
-    with app.run(
+    with configured(
+        app,
         request(
             data_transfer={"plugin": "audit-transfer"},
             steps={"work": {"plugin": "test-process", "transfer": "file"}},
         ),
-        [scene()],
-    ):
+    ).run(inputs=[scene()]):
         assert seen == [("raster", "file"), ("raster", "file")]
 
 
@@ -404,7 +404,7 @@ def test_large_declared_bytes_spill_before_publication(tmp_path):
             },
         }
     }
-    with app.run(req, [scene()]):
+    with configured(app, req).run(inputs=[scene()]):
         assert (tmp_path / "large.bin").read_bytes() == b"a" * 50
 
 
@@ -421,7 +421,7 @@ def test_remote_destination_does_not_update_original_input_metadata(tmp_path):
     registry = Registry()
     registry.register("test-remote", "data_out", remote)
     config = subset()
-    config["plugins"].append(registry.definition("test-remote"))
+    add_plugins(config, [registry.definition("test-remote")])
     app = Application(config, registry=registry, base_dir=tmp_path)
     image = scene()
     source = tmp_path / "source.tif"
@@ -458,12 +458,10 @@ def test_file_path_transfer_opens_native_raster_and_catalog_execution_defaults(t
 
     process.contract = declaration()
     app = app_for(tmp_path, process)
-    config = app.catalog
-    next(p for p in config["plugins"] if p["id"] == "test-process")["capabilities"]["process"][
-        "execution"
-    ] = {"transfer": "file"}
+    config = app.snapshot()
+    config["execution"]["steps"] = {"work": {"plugin": "test-process", "transfer": "file"}}
     app = Application(config, registry=app.registry, base_dir=tmp_path)
-    with app.run(request(), [scene()]):
+    with configured(app, request()).run(inputs=[scene()]):
         pass
 
 
@@ -513,7 +511,7 @@ def test_named_steps_split_outputs_then_combine_for_separate_processing(tmp_path
             },
         },
     }
-    with app.run(req, [scene(str(i)) for i in range(4)]) as result:
+    with configured(app, req).run(inputs=[scene(str(i)) for i in range(4)]) as result:
         assert len(result.plan.steps) == 3 and len(result.records) == 4
     assert sorted(sizes) == [2, 2, 4]
 
@@ -530,7 +528,7 @@ def test_metadata_destination_uses_actual_remote_reference(tmp_path):
     registry = Registry()
     registry.register("metadata-destination", "data_out", destination)
     config = subset()
-    config["plugins"].append(registry.definition("metadata-destination"))
+    add_plugins(config, [registry.definition("metadata-destination")])
     app = Application(config, registry=registry, base_dir=tmp_path)
     image = scene()
     image.item["assets"]["data"]["href"] = str(tmp_path / "source.tif")

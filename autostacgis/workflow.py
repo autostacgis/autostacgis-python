@@ -49,8 +49,6 @@ def parameters(value, results, objects, app):
                 "Parameters reference Item metadata with result:step:port#/pointer; inputs use native ports"
             )
         return reference(value, results, objects)
-    if isinstance(value, str) and value.startswith("path:"):
-        return str(app.path(value[5:]))
     return value
 
 
@@ -76,7 +74,6 @@ def stages(planner):
     frontier = dict(p.leaves)
     automatic = False
     barrier = set()
-    destinations = set()
     entries = list(declarations.items())
     for position, (label, declaration) in enumerate(entries):
         if declaration.get("auto"):
@@ -217,24 +214,6 @@ def stages(planner):
                 r.runtime["producer"] for g in inputs.values() for r in g if "producer" in r.runtime
             }
             output_keys = {port: [r.key for r in group] for port, group in predicted.items()}
-            paths = {}
-            for port, value in declaration.get("outputs", {}).items():
-                if isinstance(value, dict):
-                    continue
-                if len(predicted[port]) != 1 or produced.get(port):
-                    raise AutoSTACGISError(
-                        f"{label}.{port}: one explicit path requires exactly one output Item"
-                    )
-                path = str(p.app.path(value[5:]))
-                if path in destinations:
-                    raise AutoSTACGISError(f"Duplicate output path: {path}")
-                destinations.add(path)
-                paths[port] = path
-                record = predicted[port][0]
-                record.item["assets"][record.runtime["selected_asset"]]["href"] = path
-                from .stac import Stac
-
-                Stac.extensions(record.item)
             p.steps[key] = Step(
                 key,
                 name,
@@ -244,7 +223,7 @@ def stages(planner):
                 cost,
                 tuple(sorted(dependencies)),
                 label,
-                paths,
+                {},
                 {
                     k: deepcopy(contract[k])
                     for k in ("outputs", "argument_requirements", "transfer", "checkpoint")
@@ -276,46 +255,6 @@ def stages(planner):
     p.modules = automatic_modules if automatic else {}
     p.leaves = frontier
     p.memo.clear()
-
-
-def persist(record, destination, initial, app):
-    """Materialize only explicitly named outputs and carry their durable STAC href."""
-    from .io import is_local, local
-
-    path = local(destination)
-
-    for source in initial.values():
-        locations = [a.get("href", "") for a in source.item.get("assets", {}).values()]
-        locations.extend(str(v) for v in source.runtime.get("local_assets", {}).values())
-        for href in locations:
-            if not is_local(href):
-                continue
-            location = local(href).resolve()
-            if location == path.resolve():
-                raise AutoSTACGISError(f"Output path would overwrite an input: {path}")
-    from .publication import publish
-
-    suffix = path.suffix.lower()
-    encoders = [
-        name
-        for name, definition in app.capabilities["encode"].items()
-        if suffix in getattr(app.registry.resolve("encode", definition["implementation"]), "suffixes", [])
-    ]
-    if len(encoders) != 1:
-        raise AutoSTACGISError(
-            f"Explicit path requires exactly one encoder for {suffix}; configure the named output's encode and data_out"
-        )
-    encoder = encoders[0]
-    saved = publish(
-        app,
-        record,
-        {
-            "encode": {"plugin": encoder},
-            "data_out": {"plugin": "filesystem", "settings": {"path": str(path), "overwrite": True}},
-        },
-    )
-    saved.runtime["saved"] = True
-    return saved
 
 
 def validate_steps(app, request, modules):

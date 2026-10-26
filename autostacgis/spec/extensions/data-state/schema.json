@@ -25,7 +25,116 @@
     "assets": {
       "type": "object",
       "additionalProperties": {
-        "$ref": "#/definitions/fieldsAndBands"
+        "allOf": [
+          {
+            "$ref": "#/definitions/fieldsAndBands"
+          },
+          {
+            "$ref": "#/definitions/assetProvenance"
+          }
+        ]
+      }
+    },
+    "properties": {
+      "properties": {
+        "autostacgis:source_id": {
+          "type": "string",
+          "description": "Original source Item identifier retained by derived processing outputs."
+        },
+        "autostacgis:source_item_id": {
+          "type": "string",
+          "description": "Result Item identifier before catalog registration assigns a job-specific identity."
+        },
+        "autostacgis:mean_elevation_m": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Measured mean DEM elevation within the image footprint, in meters."
+        },
+        "autostacgis:elevation_sample_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "autostacgis:atmosphere_source": {
+          "type": "string"
+        },
+        "autostacgis:atmosphere": {
+          "type": "object",
+          "properties": {
+            "solar_zenith": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "solar_azimuth": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "view_zenith": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "view_azimuth": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "aot550": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "water_vapor": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ozone": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "elevation_km": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "month": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "day": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 31
+            },
+            "wavelengths_um": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "sixs_executable": {
+              "type": "string"
+            },
+            "aerosol_profile": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
       }
     }
   },
@@ -60,7 +169,14 @@
         "item_assets": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/definitions/fieldsAndBands"
+            "allOf": [
+              {
+                "$ref": "#/definitions/fieldsAndBands"
+              },
+              {
+                "$ref": "#/definitions/assetProvenance"
+              }
+            ]
           }
         }
       },
@@ -662,6 +778,41 @@
         "^(?!data_state:)": {}
       },
       "additionalProperties": false
+    },
+    "assetProvenance": {
+      "type": "object",
+      "properties": {
+        "autostacgis:pan_normalization": {
+          "type": "object",
+          "properties": {
+            "weights": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "pan_gain": {
+              "type": "number"
+            },
+            "pan_offset": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "autostacgis:normalization_group": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "autostacgis:seamline_sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     }
   }
 }

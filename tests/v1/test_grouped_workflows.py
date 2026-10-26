@@ -67,7 +67,7 @@ def test_multiple_goals_and_named_default_fragments_keep_explicit_values():
     ]
     app = Application(document, registry=registry)
     assert app.capabilities["checks"]["metadata-matches"]["settings"]["value"] is False
-    assert len(app.make_solver(app.request(), [])[1]["goal"]["all_of"]) == 2
+    assert len(app.make_solver(app._execution(), [])[1]["goal"]["all_of"]) == 2
 
 
 @pytest.mark.parametrize(

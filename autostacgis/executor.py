@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
-from .config import merge
 from .data import FileBatches, FileRaster, ZarrRaster
 from .dependencies import require
 from .errors import AutoSTACGISError
@@ -70,12 +69,7 @@ class Context:
     def stac(self):
         from .stac import Stac
 
-        catalog = getattr(self, "transfer_catalog", {})
-        catalog = catalog.get("catalog", catalog)
-        return Stac(
-            {uri: self.path(path) for uri, path in catalog.get("extension_schemas", {}).items()},
-            metadata_structure=getattr(self, "structure_definition", None),
-        )
+        return Stac(metadata_structure=getattr(self, "structure_definition", None))
 
     @property
     def metadata_structure(self):
@@ -402,14 +396,9 @@ class Executor:
 
         directory = self.app.work / "runs" / uuid4().hex
         directory.mkdir(parents=True)
-        defaults = {
-            "executor": {"implementation": "threads", "settings": {"workers": 1}},
-            "storage": {"implementation": "storage", "settings": {}},
-            "events": {"implementation": "events", "settings": {}},
-        }
         services = Services(
             self.app.registry,
-            merge(merge(defaults, self.app.catalog.get("runtime", {})), self.request.get("runtime", {})),
+            self.app.catalog["runtime"],
             directory=directory,
             events=self.app.events,
             plugins=self.app.plugins,
@@ -486,11 +475,7 @@ class Executor:
                     context.transfer_call = self.request.get(
                         "data_transfer", self.app.catalog["defaults"]["data_transfer"]
                     )
-                    context.structure_definition = (
-                        self.app.metadata_structure.definition()
-                        if self.app.metadata_structure.enabled
-                        else None
-                    )
+                    context.structure_definition = self.app.metadata_structure.definition()
                     context.transfer_catalog = self.app.snapshot()
                     context.transfer_base = self.app.base_dir
                     context.transfer_work = self.app.work
@@ -554,10 +539,6 @@ class Executor:
                                     if k in ("lineage", "member_sources", "producer")
                                 }
                             )
-                            if port in step.paths:
-                                from .workflow import persist
-
-                                record = persist(record, step.paths[port], plan.initial, self.app)
                             policy = contract["outputs"][port]
                             from .results import save_result
 

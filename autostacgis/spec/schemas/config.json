@@ -1,46 +1,5 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://autostacgis.github.io/autostacgis/v0.0.1/schemas/config.json",
-  "oneOf": [
-    {
-      "$ref": "https://autostacgis.github.io/autostacgis/v0.0.1/schemas/workflow.json"
-    },
-    {
-      "type": "object",
-      "properties": {
-        "catalog": {
-          "$ref": "https://autostacgis.github.io/autostacgis/v0.0.1/schemas/catalog.json"
-        },
-        "request": {
-          "$ref": "https://autostacgis.github.io/autostacgis/v0.0.1/schemas/request.json"
-        },
-        "metadata_structure": {
-          "type": "object",
-          "properties": {
-            "schemas": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "format": "uri"
-              },
-              "uniqueItems": true
-            },
-            "inline": {
-              "type": "object"
-            },
-            "strict": {
-              "type": "boolean",
-              "default": true
-            }
-          },
-          "required": [],
-          "additionalProperties": false
-        }
-      },
-      "required": [
-        "request"
-      ],
-      "additionalProperties": false
-    }
-  ]
+  "$ref": "https://autostacgis.github.io/autostacgis/v0.0.1/schemas/workflow.json"
 }

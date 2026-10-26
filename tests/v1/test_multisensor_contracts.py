@@ -1,5 +1,5 @@
 import pytest
-from helpers import scene
+from helpers import configured, scene
 
 from autostacgis import Application
 from autostacgis.semantics import descriptor
@@ -43,12 +43,16 @@ def workflow_inputs():
 
 def test_multisensor_collection_contracts():
     images = workflow_inputs()
+    from autostacgis_plugins import modules
     from autostacgis_plugins._backward_chain_planner import Planner, inventory
+    from helpers import subset
 
     from autostacgis.contracts import requirements_hold
     from autostacgis.goals import compile_goal, select_outputs
 
-    app = Application()
+    document = subset(*(provider.ID for provider in modules() if provider.CAPABILITY == "process"))
+    document["process"]["orthorectify_rpc"] = {"crs": "EPSG:32604"}
+    app = Application(document)
     req = {
         "goal": {
             "output": {
@@ -126,33 +130,33 @@ def test_multisensor_collection_contracts():
 def test_full_workflow_is_synthesized_from_selected_plugins(tables_first):
     app = Application(
         {
-            "version": "0.0.1",
-            "plugins": [
-                {"use": name}
-                for name in [
-                    "sample_dem",
-                    "atmospheric_correction",
-                    "orthorectify_rpc",
-                    "pansharpen",
-                    "detect_clouds",
-                    "apply_mask",
-                    "register_to_reference",
-                    "joint_coregistration",
-                    "global_radiometric_match",
-                    "local_radiometric_match",
-                    "extract_footprints",
-                    "clean_footprints",
-                    "markov_seamlines",
-                    "mask_by_polygons",
-                    "mosaic",
-                ]
-            ],
+            "solver": {"backward_chain": {}},
+            "goal": {"metadata-value": {"jsonata": "true", "value": True}},
+            "process": {
+                "sample_dem": {},
+                "atmospheric_correction": {},
+                "orthorectify_rpc": {},
+                "pansharpen": {},
+                "detect_clouds": {},
+                "apply_mask": {},
+                "register_to_reference": {},
+                "joint_coregistration": {},
+                "global_radiometric_match": {},
+                "local_radiometric_match": {},
+                "extract_footprints": {},
+                "clean_footprints": {},
+                "markov_seamlines": {},
+                "mask_by_polygons": {},
+                "mosaic": {},
+            },
+            "metadata_structure": {"strict": False},
         }
     )
     images = workflow_inputs()
     if tables_first:
         images.sort(key=lambda record: record.kind != "table")
-    plan = app.plan(
+    plan = configured(
+        app,
         {
             "goal": {
                 "output": {
@@ -185,8 +189,7 @@ def test_full_workflow_is_synthesized_from_selected_plugins(tables_first):
                 "settings": {"timeout": 30, "max_states": 20000, "max_bindings": 2000},
             },
         },
-        images,
-    )
+    ).plan(inputs=images)
     modules = [s.module for s in plan.steps]
     assert len(modules) == 25 and modules.count("sample_dem") == 2
     assert "markov_seamlines" in modules and "weighted_seamlines" not in modules

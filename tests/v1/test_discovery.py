@@ -5,7 +5,7 @@ import pytest
 from autostacgis_plugins.atmosphere import AtmosphereSource
 from autostacgis_plugins.dem import DemSource
 from autostacgis_plugins.table import TableSource
-from helpers import scene, subset
+from helpers import configured, scene, subset
 
 from autostacgis import Application
 from autostacgis.data.writers import write_raster
@@ -21,10 +21,9 @@ def test_existing_sidecar_is_reused(tmp_path):
     Stac.extensions(image.item)
     Path(str(path) + ".stac.json").write_text(json.dumps(image.item))
     config = subset("pansharpen")
-    next(p["capabilities"]["metadata_in"] for p in config["plugins"] if p["id"] == "stac-resolver")[
-        "settings"
-    ] = {"search_glob": "*.tif"}
-    result = Application(config, base_dir=tmp_path).discover(
+    config["metadata_in"]["stac-resolver"] = {"search_glob": "*.tif"}
+    result = configured(
+        Application(config, base_dir=tmp_path),
         {
             "version": "0.0.1",
             "goal": {
@@ -35,8 +34,8 @@ def test_existing_sidecar_is_reused(tmp_path):
                 }
             },
             "sources": ["stac-resolver"],
-        }
-    )
+        },
+    ).discover()
     assert result[0].item == image.item
 
 
@@ -45,9 +44,7 @@ def test_glob_metadata_rules_and_conflict(tmp_path):
     path = tmp_path / "ms.tif"
     write_raster(image.payload, path)
     config = subset("pansharpen")
-    next(p["capabilities"]["metadata_in"] for p in config["plugins"] if p["id"] == "stac-resolver")[
-        "settings"
-    ] = {
+    config["metadata_in"]["stac-resolver"] = {
         "search_glob": "*.tif",
         "metadata_rules": [
             {
@@ -60,7 +57,8 @@ def test_glob_metadata_rules_and_conflict(tmp_path):
         ],
     }
     app = Application(config, base_dir=tmp_path)
-    found = app.discover(
+    found = configured(
+        app,
         {
             "version": "0.0.1",
             "goal": {
@@ -71,14 +69,15 @@ def test_glob_metadata_rules_and_conflict(tmp_path):
                 }
             },
             "sources": ["stac-resolver"],
-        }
-    )
+        },
+    ).discover()
     assert found[0].item["assets"]["data"]["data_state:pansharpened"] is False
     image.item["assets"]["data"]["href"] = str(path)
     image.item["assets"]["data"]["data_state:pansharpened"] = True
     Path(str(path) + ".stac.json").write_text(json.dumps(image.item))
     with pytest.raises(AutoSTACGISError, match="conflicts"):
-        app.discover(
+        configured(
+            app,
             {
                 "version": "0.0.1",
                 "goal": {
@@ -91,8 +90,8 @@ def test_glob_metadata_rules_and_conflict(tmp_path):
                     }
                 },
                 "sources": ["stac-resolver"],
-            }
-        )
+            },
+        ).discover()
 
 
 def test_ancillary_discovery_defers_network(tmp_path, monkeypatch):
@@ -181,11 +180,11 @@ def test_grouped_worldview_enters_inventory_with_both_assets(tmp_path, monkeypat
     monkeypatch.setattr(Reader, "open", lambda self, path, **kwargs: product)
     app = Application(
         {
-            "version": "0.0.1",
-            "plugins": [
-                {"use": "eoreader", "settings": {"search_glob": "**/*.TIL"}},
-                {"use": "pansharpen"},
-            ],
+            "solver": {"backward_chain": {}},
+            "goal": {"metadata-value": {"jsonata": "true", "value": True}},
+            "metadata_in": {"eoreader": {"search_glob": "**/*.TIL"}},
+            "process": {"pansharpen": {}},
+            "metadata_structure": {"strict": False},
         },
         base_dir=tmp_path,
     )
@@ -199,7 +198,7 @@ def test_grouped_worldview_enters_inventory_with_both_assets(tmp_path, monkeypat
             }
         },
     }
-    records = app.discover(request)
+    records = configured(app, request).discover()
     assert len(records) == 1
     assert set(records[0].item["assets"]) == {"mul", "pan"}
     # Acquisition reinspection must not compare the PAN's actual sensing time
@@ -216,6 +215,6 @@ def test_grouped_worldview_enters_inventory_with_both_assets(tmp_path, monkeypat
     paired = eoreader_metadata(component, {}, app.scope("eoreader"))
     assert paired.item["properties"]["data_state:directory_root"] == str(tmp_path)
     assert paired.item["properties"]["datetime"] == combined["properties"]["datetime"]
-    plan = app.plan(request, records)
+    plan = configured(app, request).plan(inputs=records)
     assert len(plan.initial) == 2
     assert [step.module for step in plan.steps] == ["pansharpen"]

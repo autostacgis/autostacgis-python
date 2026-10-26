@@ -37,7 +37,7 @@ Dependencies are selected by unique plugin name. A plugin's optional `DEFAULT_CO
 
 Shared execution services and the default transfer adapter are supplied automatically. Configure their capability sections only when changing their defaults. `execution` is an optional section for orchestration such as explicit `steps`, source `query`, and work-directory settings. `metadata_structure` retains the shared STAC schema definitions described in [metadata-structures.md](metadata-structures.md).
 
-Older `{catalog, request}` files and local Python request calls remain readable for compatibility. New GUI exports and published workflows use the grouped format. Contracts are installed code and cannot be replaced through configuration.
+The capability-grouped document is the only accepted format. `{catalog, request}`, standalone catalogs, separate request files and per-call request overrides are rejected. Python uses `Application(document).plan(inputs=records)` or `.run(inputs=records)`. CLI commands accept one workflow path. Contracts are installed code and cannot be replaced through configuration.
 
 Local STAC assets and published metadata references use `file://` URIs, including Windows drive letters, network shares, spaces, and Unicode filenames. Use `autostacgis.io.local(href)` to obtain a native filesystem path from a local reference.
 
@@ -58,7 +58,7 @@ autostacgis workflows download mosaic ./workflows
 
 Published sources use HTTPS, commit-pinned URLs and SHA-256 checksums. Downloading a workflow never imports or installs its plugins. Existing local files are preserved unless CLI `--overwrite` is set. Alternate registries use `--registry`.
 
-Publish through a pull request to [autostacgis-plugins](https://github.com/autostacgis/autostacgis-plugins/blob/main/CONTRIBUTING.md) or [autostacgis-workflows](https://github.com/autostacgis/autostacgis-workflows/blob/main/CONTRIBUTING.md). Each entry has a unique ID, semantic version and description; changes require a version bump. GitHub Actions builds and deploys the registries.
+Publish through a pull request to [autostacgis-plugins](https://github.com/autostacgis/autostacgis-plugins/blob/main/CONTRIBUTING.md) or [autostacgis-workflows](https://github.com/autostacgis/autostacgis-workflows/blob/main/CONTRIBUTING.md). Each entry has a unique ID, semantic version and description; prerelease versions stay at `0.0.1` until explicitly changed. GitHub Actions builds and deploys the registries.
 
 In either GUI, activate a published or saved workflow to load its JSON into the editor. Published documents are copied before saving changes. Saved documents can be updated, copied under a new name, renamed, or deleted. Saved workflows live in the connected backend's database, including when that backend runs on your computer. This saved library is shared by web and QGIS. CLI integration deliberately stops at downloading JSON to a folder.
 

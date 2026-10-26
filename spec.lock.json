@@ -1,15 +1,15 @@
 {
   "repository": "https://github.com/autostacgis/autostacgis",
   "version": "0.0.1",
-  "commit": "737cba4c0e903e9f940a3d39899cbb72e5b237cb",
+  "commit": "b0fdd1be337bec3326ad3cbf0198f1067fc5b530",
   "files": {
     "conformance/metadata.json": "b58e43d3eb6371c87797ce9448c7c07f93ad291fdaf59b11450b95e4266e7692",
     "extensions/cf/schema.json": "82e78eb4817065c2bd595337dd4d24128354b89625eb623ed134b763e9c60466",
     "extensions/classification/schema.json": "88644b2d1fdbae3e7e71ef52b35c9d9e11355a7bfba827f67c9b18594ba361a0",
-    "extensions/data-state/schema.json": "c257d32ecae775070835b1dcbd1b32ff9382026473e0479ccb84d322be8273d9",
+    "extensions/data-state/schema.json": "77856cc2283848c95aa90ba3a5a9b6e55d49e9031a6f260af042c3659a794519",
     "extensions/eo/schema.json": "1a7494f4d8428ed39d065e3b9703a47392657ca4431c0de1f944a2483771e967",
     "extensions/grid/schema.json": "9637929dbdb547c3a8e39fe54643d21290ab0fcd8eca4b0b47b07a75f3a65236",
-    "extensions/lock.json": "61726a995920c1c595e2e52b32ac0a1d1978c7553c375fb211e50fd030e2a8ab",
+    "extensions/lock.json": "3f3bcba18b7c00766e9ab40e91530e9e7b6d06918d22aa3454e3413e23942bf8",
     "extensions/processing/schema.json": "a245a18ef537b2f1fddc7cbb833d48e1422378db953787c8f62e34bd5b7952fb",
     "extensions/product/schema.json": "55069a9e43f939fc6e4d678ffbcab719dd2f9ae0cc19a068bc18d1c9f35bc435",
     "extensions/projection/schema.json": "5e74f032c9e2ac9a3d9734b853bc3625a075d358f0513d93fba0dc9a74c97f43",
@@ -17,12 +17,8 @@
     "extensions/sar/schema.json": "5a98f6a2c3439ce2763cd3d3f4155e549d458398297e3f364923a0d9f0f5f33a",
     "extensions/sat/schema.json": "baf261cf89516f718292b1c38dd2a5510b7a5f62cac063805565ae2d2e7990ea",
     "extensions/view/schema.json": "6ac62fa971b486a031b39f8667b09f226257642cc36d7119e9ff02c0a75293d6",
-    "schemas/catalog.json": "d922f1e856398f32dbdc850c1425a11de3af650ad823fb12ef6bebd207266581",
-    "schemas/config.json": "1e69f103f33e5620af0ab9ed89c73ac0c4f9777faac1f1bcc5e14d6d1f64ae6d",
-    "schemas/goal.json": "5da59980e12306008d44db31eff87e176f9888468faf1384ee0231a5fe0a92c3",
-    "schemas/plugin.json": "1065e78e91e71d0cf4c1e4a6b2d2d49c1782b778a2ee005abb1317d9a49b6853",
-    "schemas/request.json": "028e82c0bf08e65fb7265ad37a656efc35a52ffb29e791d55e1efe04e76493a7",
+    "schemas/config.json": "0358d1309d57b9f76fed904c7c37debfbce88e640da973a64cd823e05d920a7f",
     "schemas/result.json": "29442880baef276c0b7554a059149c03329cdcbfa9352a87488e5c18a1971117",
-    "schemas/workflow.json": "d8d295ab78938f0faaf4c5c86c86d8bc935ed729669a9f94e05b2122b2e90821"
+    "schemas/workflow.json": "4a96cdafa822db701a4491bba24908412a6ab422f4e196303807132962a8c5e7"
   }
 }

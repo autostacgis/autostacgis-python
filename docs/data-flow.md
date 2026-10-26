@@ -4,7 +4,7 @@ Metadata plugins find inputs and return STAC Items. EOReader owns filesystem sea
 (`root_directory`, `search_glob`, optional `constellations`) and product inspection.
 Use `stac-resolver` for ordinary local rasters with exact `.tif.stac.json` sidecars,
 `stac-source` for existing Items or STAC searches, and EODAG for provider searches.
-`request.sources` selects these `metadata_in` plugins. `request.query` is passed to
+`execution.sources` selects these `metadata_in` plugins. `execution.query` is passed to
 them; EODAG maps `area` to its geographic search. EOReader's local search uses its
 filesystem pattern. There is no separate glob or enrichment stage in configuration.
 
@@ -71,9 +71,7 @@ data_transfer:
 ```
 
 `transfer: memory`, `file`, or `optimized` can be declared by a plugin or overridden
-on a named step/output. Set `catalog.plugins[].execution` on a processing plugin
-to override these defaults for automatically planned steps, for example
-`{use: statistics, execution: {transfer: file, checkpoint: null}}`. Optimized is the default. Memory explicitly requests
+on a named step/output under `execution.steps`. For example, `execution.steps.measure: {plugin: statistics, transfer: file, checkpoint: null}`. Optimized is the default. Memory explicitly requests
 buffering; file requests file backing. For bytes, receivers must accept `path` or
 `byte-stream` to allow spilling. This budget does not constrain memory inside
 numerical libraries. Managed scratch is valid while the `RunResult` remains open.

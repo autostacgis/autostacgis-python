@@ -4,7 +4,6 @@ from pathlib import Path
 import click
 
 from .app import Application
-from .config import read
 
 
 def emit(value):
@@ -17,12 +16,10 @@ def main():
 
 
 @main.command("validate")
-@click.argument("catalog", type=click.Path(exists=True))
-@click.option("--request", type=click.Path(exists=True))
-def validate_command(catalog, request):
-    app = Application.from_file(catalog)
-    if request or app.default_request is not None:
-        app.request(request)
+@click.argument("configuration", type=click.Path(exists=True))
+def validate_command(configuration):
+    app = Application.from_file(configuration)
+    app._execution()
     click.echo("Valid")
 
 
@@ -100,36 +97,25 @@ def download_workflow(name, directory, version, registry, overwrite):
 
 def operation(name):
     @main.command(name)
-    @click.argument("catalog", type=click.Path(exists=True))
-    @click.argument("request", required=False, type=click.Path(exists=True))
-    def command(catalog, request):
-        app = Application.from_file(catalog)
-        req = read(request) if request else app.request()
+    @click.argument("configuration", type=click.Path(exists=True))
+    def command(configuration):
+        app = Application.from_file(configuration)
         if name == "discover":
-            emit([r.item for r in app.discover(req)])
+            emit([r.item for r in app.discover()])
         elif name == "plan":
-            emit(app.plan(req).to_dict())
+            emit(app.plan().to_dict())
         elif name == "available":
-            emit(app.available(req))
+            emit(app.available())
         else:
-            result = (
-                app.trigger(app.trigger_name, req) if app.trigger_name not in (None, "now") else app.run(req)
-            )
+            result = app.trigger()
             if hasattr(result, "close"):
                 with result:
                     emit([r.item for r in result])
-            else:
+            elif hasattr(result, "to_dict"):
                 emit(result.to_dict())
 
     return command
 
 
-for name in ("discover", "plan", "available", "run"):
+for name in ("discover", "plan", "available", "run", "trigger"):
     operation(name)
-
-
-@main.command("trigger")
-@click.argument("catalog", type=click.Path(exists=True))
-@click.argument("name")
-def trigger_command(catalog, name):
-    Application.from_file(catalog).trigger(name)

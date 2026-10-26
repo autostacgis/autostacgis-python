@@ -7,7 +7,6 @@ from pathlib import Path
 from .config import unique, validate
 from .errors import AutoSTACGISError
 from .remote_registry import RemoteRegistry
-from .workflow_config import is_workflow
 
 REGISTRY_URL = "https://autostacgis.github.io/autostacgis-workflows/workflows.json"
 
@@ -22,9 +21,7 @@ class WorkflowManager:
     def get(self, name, version=None):
         row = self.remote.entry(name, version)
         document = json.loads(self.remote.source(row).text, object_pairs_hook=unique)
-        if not is_workflow(document):
-            raise AutoSTACGISError("Published workflows must use capability sections with solver and goal")
-        validate(document, "workflow")
+        validate(document, "config")
         # Installed-plugin validation happens on activation/validation.
         # Downloading a workflow must not import or install its plugins implicitly.
         return {
